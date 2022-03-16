@@ -13,6 +13,8 @@ services:
 
   spark-master:
     build: ./spark
+    volumes:
+      - ./spark-data:/data
     ports:
       - "8080:8080"
       - "7077:7077"
