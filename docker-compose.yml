@@ -10,7 +10,6 @@ services:
   #     - "1880:1880"
   #   volumes:
   #     - ./node-red-data:/data
-
   spark-master:
     build: ./spark
     volumes:
@@ -36,7 +35,16 @@ services:
       - SPARK_MASTER=spark://spark-master:7077
       - SPARK_WORKER_MEMORY=2G
       - SPARK_WORKER_CORES=2
-  mpi:
-    build: ./mpi
-    deploy:
-      replicas: 2
+  spark-driver:
+    build: ./spark-driver
+    volumes:
+      - ./spark-data:/data
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+    depends_on:
+      - spark-master
+
+  # mpi:
+  #   build: ./mpi
+  #   deploy:
+  #     replicas: 2
