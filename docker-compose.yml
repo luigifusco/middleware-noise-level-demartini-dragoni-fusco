@@ -2,16 +2,17 @@
 version: '3.9'
 
 services:
-  # node-red:
-  #   image: nodered/node-red:latest
-  #   environment:
-  #     - TZ=Europe/Rome
-  #   ports:
-  #     - "1880:1880"
-  #   volumes:
-  #     - ./node-red-data:/data
+  node-red:
+    image: nodered/node-red:latest
+    environment:
+      - TZ=Europe/Rome
+    ports:
+      - "1880:1880"
+    volumes:
+      - ./node-red-data:/data
+
   spark-master:
-    build: ./spark
+    build: ./spark/cluster
     volumes:
       - ./spark-data:/data
     ports:
@@ -21,7 +22,7 @@ services:
       - INIT_DAEMON_STEP=setup_spark
       - SPARK_MODE=master
   spark-worker:
-    build: ./spark
+    build: ./spark/cluster
     volumes:
       - ./spark-data:/data
     deploy:
@@ -36,7 +37,7 @@ services:
       - SPARK_WORKER_MEMORY=2G
       - SPARK_WORKER_CORES=2
   spark-driver:
-    build: ./spark-driver
+    build: ./spark/driver
     volumes:
       - ./spark-data:/data
     environment:

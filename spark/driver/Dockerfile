@@ -10,8 +10,11 @@ RUN wget ${BASE_URL}/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${H
     && rm spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz
 
 WORKDIR /app
-COPY src/ pom.xml entrypoint.sh ./
 
-RUN mvn clean package
+COPY pom.xml entrypoint.sh ./
+RUN mvn verify clean --fail-never
+
+COPY src/ ./src/
+RUN mvn package
 
 CMD ["./entrypoint.sh"]

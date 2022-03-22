@@ -33,7 +33,7 @@ public class WordCount {
 
         System.out.println(filePath + "files/wordcount/in.txt");
 
-        JavaRDD<String> lines = spark.sparkContext().broadcast(spark.read().textFile(filePath + "files/wordcount/in.txt").javaRDD());
+        JavaRDD<String> lines = spark.read().textFile(filePath + "files/wordcount/in.txt").javaRDD();
         JavaRDD<String> words = lines.flatMap(s -> Arrays.asList(s.split(" ")).iterator());
         JavaPairRDD<String, Integer> ones = words.mapToPair(s -> new Tuple2<>(s, 1));
         JavaPairRDD<String, Integer> counts = ones.reduceByKey((i1, i2) -> i1 + i2);
