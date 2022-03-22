@@ -42,6 +42,7 @@ services:
       - ./spark-data:/data
     environment:
       - SPARK_MASTER=spark://spark-master:7077
+      - SPARK_LOCAL_IP=spark-driver
     depends_on:
       - spark-master
 

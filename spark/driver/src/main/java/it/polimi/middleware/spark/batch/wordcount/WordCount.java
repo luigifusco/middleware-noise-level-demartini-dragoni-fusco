@@ -18,10 +18,8 @@ public class WordCount {
         LogUtils.setLogLevel();
 
         final String filePath = args.length > 0 ? args[0] : "./";
-        final String master = args.length > 1 ? args[1] : "spark://localhost:7077";
 
         SparkConf conf = new SparkConf()
-                .setMaster(master)
                 .setAppName("WordCount");
 
         SparkSession spark = SparkSession
@@ -42,5 +40,4 @@ public class WordCount {
 
         spark.close();
     }
-
 }
