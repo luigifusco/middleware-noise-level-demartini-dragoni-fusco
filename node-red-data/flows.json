@@ -1,0 +1,99 @@
+[
+    {
+        "id": "9e2990e28006b0c1",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "c7c0605c05032967",
+        "type": "mqtt in",
+        "z": "9e2990e28006b0c1",
+        "name": "Raw sensor data",
+        "topic": "",
+        "qos": "2",
+        "datatype": "auto",
+        "broker": "",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 200,
+        "wires": [
+            [
+                "dfac68e21b18ec9a"
+            ]
+        ]
+    },
+    {
+        "id": "dfac68e21b18ec9a",
+        "type": "function",
+        "z": "9e2990e28006b0c1",
+        "name": "",
+        "func": "\nconsole.log(\"Process message\");\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 180,
+        "wires": [
+            [
+                "58ba75e0f6719d30"
+            ]
+        ]
+    },
+    {
+        "id": "58ba75e0f6719d30",
+        "type": "function",
+        "z": "9e2990e28006b0c1",
+        "name": "",
+        "func": "const producer = context.get('producer')\n\nconst run = async () => {\n  // Producing\n  await producer.connect()\n  await producer.send({\n    topic: 'test-topic',\n    messages: [\n      { value: 'Hello KafkaJS user!' },\n    ],\n  })\n}\n\nrun().catch(console.error)",
+        "outputs": 0,
+        "noerr": 0,
+        "initialize": "// Code added here will be run once\n// whenever the node is started.\nconst kafka = new kafkajs.Kafka({\n  clientId: 'my-app',\n  brokers: ['kafka:9092']\n})\n\ncontext.set('producer', kafka.producer());\n",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "kafkajs",
+                "module": "kafkajs"
+            }
+        ],
+        "x": 760,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "b2066da78b2bd9dc",
+        "type": "inject",
+        "z": "9e2990e28006b0c1",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "1",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "1",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 140,
+        "wires": [
+            [
+                "dfac68e21b18ec9a"
+            ]
+        ]
+    }
+]

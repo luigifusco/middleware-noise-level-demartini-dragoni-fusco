@@ -1,3 +1,5 @@
 node-red-data/.config*
 node-red-data/node_modules
 .idea/
+node-red-data/.flows.json.backup
+node-red-data/package-lock.json
