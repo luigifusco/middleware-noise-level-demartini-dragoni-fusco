@@ -52,10 +52,10 @@
         "type": "function",
         "z": "9e2990e28006b0c1",
         "name": "",
-        "func": "const producer = context.get('producer')\n\nconst run = async () => {\n  // Producing\n  await producer.connect()\n  await producer.send({\n    topic: 'test-topic',\n    messages: [\n      { value: 'Hello KafkaJS user!' },\n    ],\n  })\n}\n\nrun().catch(console.error)",
+        "func": "const producer = context.get('producer')\n\nconst run = async () => {\n  // Producing\n  await producer.connect()\n  await producer.send({\n    topic: 'test-topic',\n    messages: [\n      { value: 'Hello KafkaJS user!' + JSON.stringify(msg)},\n    ],\n  })\n}\n\nrun().catch(console.error)",
         "outputs": 0,
         "noerr": 0,
-        "initialize": "// Code added here will be run once\n// whenever the node is started.\nconst kafka = new kafkajs.Kafka({\n  clientId: 'my-app',\n  brokers: ['kafka:9092']\n})\n\ncontext.set('producer', kafka.producer());\n",
+        "initialize": "// Code added here will be run once\n// whenever the node is started.\nconst kafka = new kafkajs.Kafka({\n  clientId: 'client',\n  brokers: ['kafka:9092']\n})\n\ncontext.set('producer', kafka.producer());\n",
         "finalize": "",
         "libs": [
             {
