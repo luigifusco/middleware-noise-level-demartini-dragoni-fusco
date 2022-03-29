@@ -62,6 +62,14 @@ services:
     depends_on:
       - spark-master
       - kafka
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    volumes:
+      - ./mosquitto-data:/mosquitto/data
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+
+    ports:
+      - "1883:1883"
 
   node-red:
     image: nodered/node-red:latest
@@ -73,6 +81,7 @@ services:
       - ./node-red-data:/data
     depends_on:
       - kafka
+      - mosquitto
 
   # mpi:
   #   build: ./mpi
