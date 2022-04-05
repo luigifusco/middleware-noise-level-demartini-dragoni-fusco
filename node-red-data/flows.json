@@ -58,8 +58,8 @@
         "id": "58ba75e0f6719d30",
         "type": "function",
         "z": "9e2990e28006b0c1",
-        "name": "",
-        "func": "const producer = context.get('producer')\n\nconst run = async () => {\n  // Producing\n  await producer.connect()\n  await producer.send({\n    topic: 'poi-data',\n    messages: [\n      { value: 'Hello KafkaJS user!' + JSON.stringify(msg)},\n    ],\n  })\n}\n\nrun().catch(console.error)",
+        "name": "Kafka producer",
+        "func": "const producer = context.get('producer')\n\nconst run = async () => {\n  // Producing\n  await producer.connect()\n  await producer.send({\n    topic: 'poi-data',\n    messages: [\n      { value: JSON.stringify(msg)},\n    ],\n  })\n}\n\nrun().catch(console.error)",
         "outputs": 0,
         "noerr": 0,
         "initialize": "// Code added here will be run once\n// whenever the node is started.\nconst kafka = new kafkajs.Kafka({\n  clientId: 'client',\n  brokers: ['kafka:9092']\n})\n\ncontext.set('producer', kafka.producer());\n",
@@ -70,9 +70,10 @@
                 "module": "kafkajs"
             }
         ],
-        "x": 620,
+        "x": 640,
         "y": 180,
-        "wires": []
+        "wires": [],
+        "icon": "node-red/bridge-dash.svg"
     },
     {
         "id": "3f551a844f02a43a",
@@ -118,6 +119,90 @@
         "wires": [
             [
                 "3f551a844f02a43a"
+            ]
+        ]
+    },
+    {
+        "id": "14739b731c1ddda2",
+        "type": "csv",
+        "z": "9e2990e28006b0c1",
+        "name": "Points of interest",
+        "sep": ",",
+        "hdrin": true,
+        "hdrout": "none",
+        "multi": "one",
+        "ret": "\\n",
+        "temp": "name,latitude,longitude",
+        "skip": "0",
+        "strings": true,
+        "include_empty_strings": "",
+        "include_null_values": "",
+        "x": 450,
+        "y": 60,
+        "wires": [
+            [
+                "200188dc75b1e30a"
+            ]
+        ]
+    },
+    {
+        "id": "8610cac4be5fe3db",
+        "type": "file in",
+        "z": "9e2990e28006b0c1",
+        "name": "poi.csv",
+        "filename": "/data/input/poi.csv",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 280,
+        "y": 60,
+        "wires": [
+            [
+                "14739b731c1ddda2"
+            ]
+        ]
+    },
+    {
+        "id": "200188dc75b1e30a",
+        "type": "debug",
+        "z": "9e2990e28006b0c1",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 650,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "934f75e3e4970af1",
+        "type": "inject",
+        "z": "9e2990e28006b0c1",
+        "name": "Trigger read",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 130,
+        "y": 60,
+        "wires": [
+            [
+                "8610cac4be5fe3db"
             ]
         ]
     }
