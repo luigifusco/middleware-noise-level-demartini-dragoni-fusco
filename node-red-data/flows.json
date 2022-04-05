@@ -37,38 +37,20 @@
         "id": "c7c0605c05032967",
         "type": "mqtt in",
         "z": "9e2990e28006b0c1",
-        "name": "Raw sensor data",
+        "name": "Recv sensor data",
         "topic": "sensor-data",
         "qos": "1",
-        "datatype": "auto",
+        "datatype": "json",
         "broker": "c5c14dcb012cf313",
         "nl": false,
         "rap": true,
         "rh": 0,
         "inputs": 0,
         "x": 140,
-        "y": 200,
-        "wires": [
-            [
-                "dfac68e21b18ec9a"
-            ]
-        ]
-    },
-    {
-        "id": "dfac68e21b18ec9a",
-        "type": "function",
-        "z": "9e2990e28006b0c1",
-        "name": "",
-        "func": "\nconsole.log(\"Process message\");\n\nreturn msg;",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 480,
         "y": 180,
         "wires": [
             [
+                "1f6c2e6aabfaf48a",
                 "58ba75e0f6719d30"
             ]
         ]
@@ -90,36 +72,82 @@
             }
         ],
         "x": 760,
-        "y": 200,
+        "y": 180,
         "wires": []
     },
     {
-        "id": "b2066da78b2bd9dc",
+        "id": "3f551a844f02a43a",
+        "type": "mqtt out",
+        "z": "9e2990e28006b0c1",
+        "name": "Send sensor data",
+        "topic": "sensor-data",
+        "qos": "1",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "c5c14dcb012cf313",
+        "x": 730,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "73ac97ce17221942",
         "type": "inject",
         "z": "9e2990e28006b0c1",
-        "name": "",
+        "name": "Fake gateway w/ pos",
         "props": [
             {
-                "p": "payload"
+                "p": "noise",
+                "v": "87.6",
+                "vt": "num"
             },
             {
-                "p": "topic",
+                "p": "ts",
+                "v": "",
+                "vt": "date"
+            },
+            {
+                "p": "reliability",
+                "v": "0.7",
+                "vt": "num"
+            },
+            {
+                "p": "position",
+                "v": "8.23167756,-10.4534563",
                 "vt": "str"
             }
         ],
-        "repeat": "1",
+        "repeat": "5",
         "crontab": "",
-        "once": false,
-        "onceDelay": "1",
+        "once": true,
+        "onceDelay": 0.1,
         "topic": "",
-        "payload": "",
-        "payloadType": "date",
-        "x": 150,
-        "y": 140,
+        "x": 160,
+        "y": 280,
         "wires": [
             [
-                "dfac68e21b18ec9a"
+                "3f551a844f02a43a"
             ]
         ]
+    },
+    {
+        "id": "1f6c2e6aabfaf48a",
+        "type": "debug",
+        "z": "9e2990e28006b0c1",
+        "name": "Print sensor data",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 510,
+        "y": 100,
+        "wires": []
     }
 ]
