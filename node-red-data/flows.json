@@ -50,7 +50,7 @@
         "y": 180,
         "wires": [
             [
-                "58ba75e0f6719d30"
+                "e1f4aece9e250923"
             ]
         ]
     },
@@ -59,7 +59,7 @@
         "type": "function",
         "z": "9e2990e28006b0c1",
         "name": "Kafka producer",
-        "func": "const producer = context.get('producer')\n\nconst run = async () => {\n  // Producing\n  await producer.connect()\n  await producer.send({\n    topic: 'poi-data',\n    messages: [\n      { value: JSON.stringify(msg)},\n    ],\n  })\n}\n\nrun().catch(console.error)",
+        "func": "const producer = context.get('producer')\n\nconst run = async () => {\n  // Producing\n  await producer.connect()\n  await producer.send({\n    topic: 'poi-data',\n    messages: [\n      { value: JSON.stringify(msg.payload)},\n    ],\n  })\n}\n\nrun().catch(console.error)",
         "outputs": 0,
         "noerr": 0,
         "initialize": "// Code added here will be run once\n// whenever the node is started.\nconst kafka = new kafkajs.Kafka({\n  clientId: 'client',\n  brokers: ['kafka:9092']\n})\n\ncontext.set('producer', kafka.producer());\n",
@@ -70,7 +70,7 @@
                 "module": "kafkajs"
             }
         ],
-        "x": 640,
+        "x": 1200,
         "y": 180,
         "wires": [],
         "icon": "node-red/bridge-dash.svg"
@@ -112,7 +112,7 @@
         "once": true,
         "onceDelay": 0.1,
         "topic": "sensor/data",
-        "payload": "{\"noise\":87.6,\"ts\":1649164799169,\"reliability\":0.7,\"position\":\"8.23167756,-10.4534563\"}",
+        "payload": "{\"noise\":76.6,\"ts\":1649164799169,\"reliability\":0.7,\"lon\":-22.23167756,\"lat\":76.4534563}",
         "payloadType": "json",
         "x": 160,
         "y": 440,
@@ -130,18 +130,18 @@
         "sep": ",",
         "hdrin": true,
         "hdrout": "none",
-        "multi": "one",
+        "multi": "mult",
         "ret": "\\n",
-        "temp": "name,latitude,longitude",
+        "temp": "name,lat,lon,noise",
         "skip": "0",
         "strings": true,
         "include_empty_strings": "",
         "include_null_values": "",
-        "x": 450,
+        "x": 510,
         "y": 60,
         "wires": [
             [
-                "200188dc75b1e30a"
+                "5b2e766bd4d58d0d"
             ]
         ]
     },
@@ -156,7 +156,7 @@
         "sendError": false,
         "encoding": "none",
         "allProps": false,
-        "x": 280,
+        "x": 320,
         "y": 60,
         "wires": [
             [
@@ -177,8 +177,8 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 650,
-        "y": 60,
+        "x": 1170,
+        "y": 20,
         "wires": []
     },
     {
@@ -191,18 +191,92 @@
                 "p": "payload"
             }
         ],
-        "repeat": "",
+        "repeat": "3600",
         "crontab": "",
         "once": true,
         "onceDelay": 0.1,
         "topic": "",
         "payload": "",
         "payloadType": "date",
-        "x": 130,
+        "x": 140,
         "y": 60,
         "wires": [
             [
                 "8610cac4be5fe3db"
+            ]
+        ]
+    },
+    {
+        "id": "1b1b1a2359d7fb77",
+        "type": "function",
+        "z": "9e2990e28006b0c1",
+        "name": "Aggregator",
+        "func": "function ema(acc, x, alpha) {\n    return acc * (1.0 - alpha) + x * alpha;\n}\n\nfunction distance(lat0, lon0, lat1, lon1) {\n  let p = 0.017453292519943295;    // Math.PI / 180\n  let c = Math.cos;\n  let a = 0.5 - c((lat1 - lat0) * p)/2 + \n          c(lat0 * p) * c(lat1 * p) * \n          (1 - c((lon1 - lon0) * p))/2;\n\n  return 12742 * Math.asin(Math.sqrt(a)); // 2 * R; R = 6371 km\n}\n\nfunction distance_factor(d) {\n    console.log(d);\n    const m = 20.0;\n    if (d < m) {\n        return 1.0;\n    } else {\n        return Math.exp((m - d)/50.0);\n    }\n}\n\nfunction update(poi, reading) {\n    let d = distance(poi.lon, poi.lat, reading.lon, reading.lat);\n    let alpha = 0.3 * reading.reliability * distance_factor(d);\n    \n    return ema(poi.noise, reading.noise, alpha);\n}\n\nif (msg.kind === \"sensor-data\") {\n    let map = context.get('map');\n    map = map.map(function(poi) {\n        poi.noise = update(poi, msg.payload);\n        return poi;\n    })\n    context.set('map', map);\n    \n    return [map];\n} else if (msg.kind === \"poi\") {\n    context.set('map', msg.payload);\n}\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "// Code added here will be run once\n// whenever the node is started.\nif (context.get(\"map\") === undefined) {\n    context.set(\"map\", [])\n}",
+        "finalize": "",
+        "libs": [],
+        "x": 930,
+        "y": 180,
+        "wires": [
+            [
+                "200188dc75b1e30a",
+                "58ba75e0f6719d30"
+            ]
+        ]
+    },
+    {
+        "id": "5b2e766bd4d58d0d",
+        "type": "change",
+        "z": "9e2990e28006b0c1",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "kind",
+                "pt": "msg",
+                "to": "poi",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 710,
+        "y": 60,
+        "wires": [
+            [
+                "1b1b1a2359d7fb77"
+            ]
+        ]
+    },
+    {
+        "id": "e1f4aece9e250923",
+        "type": "change",
+        "z": "9e2990e28006b0c1",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "kind",
+                "pt": "msg",
+                "to": "sensor-data",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 710,
+        "y": 180,
+        "wires": [
+            [
+                "1b1b1a2359d7fb77"
             ]
         ]
     }
