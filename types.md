@@ -22,7 +22,6 @@ Coming from raw sensor data, with added position if missing
 ### PoI noise update
 > Edge -> Kafka
 
-+ id_poi
-+ noise_avg
-+ ts (computed n from readings)
-
++ id
++ noise
++ ts

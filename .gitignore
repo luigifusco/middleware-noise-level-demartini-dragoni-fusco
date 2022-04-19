@@ -7,3 +7,4 @@ node-red-data/package-lock.json
 kafka-data/
 zookeeper-data/
 mosquitto-data/
+.vscode/c_cpp_properties.json
