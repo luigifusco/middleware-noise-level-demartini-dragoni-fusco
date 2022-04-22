@@ -8,3 +8,4 @@ kafka-data/
 zookeeper-data/
 mosquitto-data/
 .vscode/c_cpp_properties.json
+mpi/target/

@@ -1,13 +1,16 @@
 #ifndef __COMM_H__
 #define __COMM_H__
 
-#define W 500
-#define H 800
-#define N_P 100
-#define N_V 10
+#define LAT_0 45.0
+#define LON_0 9.0
+#define LAT_1 45.01
+#define LON_1 9.01
+
+#define N_P 15000
+#define N_V 250
 #define N_SENSORS 16
-#define NOISE_P 40
-#define NOISE_V 90
+#define NOISE_P 40.0
+#define NOISE_V 90.0
 #define D_P 10
 #define D_V 50
 #define V_P 3

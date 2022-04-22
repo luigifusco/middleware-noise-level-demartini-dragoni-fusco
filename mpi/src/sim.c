@@ -3,6 +3,7 @@
 #include <math.h>
 #include <time.h>
 #include <mpi.h>
+#include <unistd.h>
 
 #include "sim.h"
 #include "utils.c"
@@ -21,19 +22,18 @@ MPI_Datatype define_sensor_dt() {
     // We need to compute the displacement to be really portable
     // (different compilers might align structures differently)
     MPI_Aint displacements[struct_len];
-    MPI_Aint current_displacement = 0;
     // Add field
-    block_lens[0] = 4;
+    block_lens[0] = 1;
     types[0] = MPI_FLOAT;
     displacements[0] = (size_t) &(s.x) - (size_t) &s;
     // Add field
-    block_lens[1] = 4;
+    block_lens[1] = 1;
     types[1] = MPI_FLOAT;
-    displacements[1] = (size_t) &(s.y) - (size_t) &(s.x);
+    displacements[1] = (size_t) &(s.y) - (size_t) &s;
     // Add field
-    block_lens[2] = 8;
+    block_lens[2] = 1;
     types[2] = MPI_DOUBLE;
-    displacements[2] = (size_t) &(s.noise_mw) - (size_t) &(s.y);
+    displacements[2] = (size_t) &(s.noise_mw) - (size_t)&s;
     // Create and commit the data structure
     MPI_Type_create_struct(struct_len, block_lens, displacements, types, &dt);
     MPI_Type_commit(&dt);
@@ -41,21 +41,12 @@ MPI_Datatype define_sensor_dt() {
     return dt;
 }
 
-// Creates an array of random numbers.
-int *create_random_array(int num_elements, int max_value) {
-  int *arr = (int *) malloc(sizeof(int)*num_elements);
-  for (int i=0; i<num_elements; i++) {
-    arr[i] = (rand() % max_value);
-  }
-  return arr;
-}
-
-sensor_t* spawn_sensors(size_t n, float x_max, float y_max) {
+sensor_t* spawn_sensors(size_t n, bounds_t bounds) {
   sensor_t* sensors = (sensor_t*)calloc(n, sizeof(sensor_t));
 
   for (int i = 0; i < n; i++) {
-    sensors[i].x = rand_range_f(0.0, x_max);
-    sensors[i].y = rand_range_f(0.0, y_max);
+    sensors[i].x = rand_range_f(bounds.x0, bounds.x1);
+    sensors[i].y = rand_range_f(bounds.y0, bounds.y1);
     sensors[i].noise_mw = 0.0;
   }
 
@@ -99,8 +90,9 @@ float entity_noise(const entity_t* e) {
 }
 
 void sensor_add_source(sensor_t *restrict s, const entity_t *restrict e) {
-  float d = distance(s->x, s->y, e->x, e->y);
+  float d = distance_ang(s->x, s->y, e->x, e->y);
   double contribution = noise_decay(entity_noise(e), d);
+  // printf("d: %.1f\tn: %.1f\tc: %.1f\n", d, entity_noise(e), contribution);
   s->noise_mw += contribution;
 }
 
@@ -133,15 +125,15 @@ int main(int argc, char** argv) {
     n_people = (N_P + world_size - 1) / world_size;
     n_vehichles = (N_V + world_size - 1) / world_size;
 
-    bounds.x0 = 0.0;
-    bounds.x1 = (float)W;
-    bounds.y0 = 0.0;
-    bounds.y1 = (float)H;
+    bounds.x0 = (float)LAT_0;
+    bounds.x1 = (float)LAT_1;
+    bounds.y0 = (float)LON_0;
+    bounds.y1 = (float)LON_1;
 
     v_p = V_P;
     v_v = V_V;
 
-    sensors = spawn_sensors(n_sensors, (float)W, (float)H);
+    sensors = spawn_sensors(n_sensors, bounds);
   }
 
   MPI_Bcast(&n_sensors, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -152,11 +144,12 @@ int main(int argc, char** argv) {
   MPI_Bcast(&v_p, 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
   MPI_Bcast(&v_v, 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
+  printf("%d %d %d\n", n_sensors, n_people, n_vehichles);
 
   if (my_rank != 0) {
     sensors = calloc(n_sensors, sizeof(sensor_t));
   }
-  MPI_Bcast(&sensors, n_sensors, sensor_dt, 0, MPI_COMM_WORLD);
+  MPI_Bcast(sensors, n_sensors, sensor_dt, 0, MPI_COMM_WORLD);
 
   int n_entities = n_people + n_vehichles;
   entity_t* entities = (entity_t*)calloc(n_entities, sizeof(entity_t));
@@ -168,21 +161,22 @@ int main(int argc, char** argv) {
     float angle = rand_range_f(0, PI2);
     if (i < n_people) {
       entities[i].kind = PERSON;
-      entities[i].x_v = v_p * cos(angle);
-      entities[i].y_v = v_p * sin(angle);
+      entities[i].x_v = v_p * cos(angle) / EARTH_RADIUS;
+      entities[i].y_v = v_p * sin(angle) / EARTH_RADIUS;
     } else {
       entities[i].kind = VEHICLE;
-      entities[i].x_v = v_v * cos(angle);
-      entities[i].y_v = v_v * sin(angle);
+      entities[i].x_v = v_v * cos(angle) / EARTH_RADIUS;
+      entities[i].y_v = v_v * sin(angle) / EARTH_RADIUS;
     }
   }
 
-  while(1) {
+  for(int i = 0;; i++) {
     for (int i = 0; i < n_entities; i++) {
       entity_step(&entities[i], bounds, TS);
     }
     for (int j = 0; j < n_sensors; j++) {
       sensors[j].noise_mw = 0;
+      // #pragma omp for reduction(+ : sensors[j].noise_mw)
       for (int i = 0; i < n_entities; i++) {
         sensor_add_source(&sensors[j], &entities[i]);
       }
@@ -192,7 +186,7 @@ int main(int argc, char** argv) {
         &sensors[j].noise_mw,
         &noise_sum,
         1,
-        MPI_FLOAT,
+        MPI_DOUBLE,
         MPI_SUM,
         0,
         MPI_COMM_WORLD
@@ -204,8 +198,14 @@ int main(int argc, char** argv) {
     }
     if (my_rank == 0) {
       send_readings(sensors, n_sensors);
+      printf("%04d\n", i);
     }
+    sleep(5);
+    MPI_Barrier(MPI_COMM_WORLD);
   }
+
+  free(sensors);
+  free(entities);
 
   /// divide the entities counts between nodes
   /// each node spawns them at random positions

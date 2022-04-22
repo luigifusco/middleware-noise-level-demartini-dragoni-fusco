@@ -1,4 +1,5 @@
 #include<stdlib.h>
+#include<stdio.h>
 
 #define PI 3.141592653589793
 #define PI2 PI*2

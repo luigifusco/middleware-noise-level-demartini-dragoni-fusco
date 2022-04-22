@@ -39,6 +39,7 @@ void send_readings(const sensor_t* sensors, size_t n) {
         sensor_msg_t msg = {s->x, s->y, lin_to_dbm(s->noise_mw), 0.5, time(NULL)};
         char* json = format_msg(&msg);
         // mqtt_publish(client, "sensor/data", json, strlen(json), MQTT_PUBLISH_QOS_1);
+        fprintf(stdout, "%03d: ", i);
         fputs(json, stdout);
         putc('\n', stdout);
         free(json);
