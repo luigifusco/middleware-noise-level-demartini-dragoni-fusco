@@ -1,15 +1,17 @@
 package it.polimi.noiseData;
 
-public class NoiseData {
-    private String id;
-    private String noise;
-    private String timestamp;
+import java.io.Serializable;
+
+public class NoiseData implements Serializable {
+    public String id;
+    public String noise;
+    public String ts;
 
     public NoiseData(){}
-    public NoiseData(String id, String noise, String timestamp) {
+    public NoiseData(String id, String noise, String ts) {
         this.id = id;
         this.noise = noise;
-        this.timestamp = timestamp;
+        this.ts = ts;
     }
 
     public String getId() { return id; }
@@ -18,6 +20,20 @@ public class NoiseData {
     public String getNoise() { return noise; }
     public void setNoise(String noise) { this.noise = noise; }
 
-    public String getTimestamp() { return timestamp; }
-    public void setTimestamp(String timestamp) { this.timestamp = timestamp; }
+    public String getTs() {
+        return ts;
+    }
+
+    public void setTs(String ts) {
+        this.ts = ts;
+    }
+
+    @Override
+    public String toString() {
+        return "NoiseData{" +
+                "id='" + id + '\'' +
+                ", noise='" + noise + '\'' +
+                ", ts='" + ts + '\'' +
+                '}';
+    }
 }

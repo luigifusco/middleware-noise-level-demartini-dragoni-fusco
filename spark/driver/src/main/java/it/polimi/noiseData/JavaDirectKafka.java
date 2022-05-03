@@ -1,6 +1,8 @@
 package it.polimi.noiseData;
 
 import java.util.*;
+
+import com.google.gson.Gson;
 import org.apache.spark.SparkConf;
 import org.apache.spark.TaskContext;
 import org.apache.spark.api.java.*;
@@ -42,20 +44,24 @@ public final class JavaDirectKafka {
         SparkConf sparkConf = new SparkConf().setAppName("JavaKafkaIntegration");
         JavaStreamingContext streamingContext = new JavaStreamingContext(sparkConf, new Duration(2000));
 
-        JavaInputDStream<ConsumerRecord<String, String>> stream =
+        JavaInputDStream<ConsumerRecord<String, String>> streamString =
                 KafkaUtils.createDirectStream(
                         streamingContext,
                         LocationStrategies.PreferConsistent(),
                         ConsumerStrategies.<String, String>Subscribe(topics, kafkaParams)
                 );
 
-        var streamsss = stream.mapToPair(record -> new Tuple2<>(record.key(), record.value()));
+
+        var streamNoiseData = streamString.mapToPair(record -> {
+                NoiseData data = new Gson().fromJson(record.value(), NoiseData.class);
+                return new Tuple2<>(record.key(), data);
+        });
 
 
 
-        streamsss.print();
-         streamingContext.start();
-         streamingContext.awaitTermination();
+
+        streamingContext.start();
+        streamingContext.awaitTermination();
 
     }
 }
