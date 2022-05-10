@@ -84,5 +84,5 @@ services:
 
   # mpi:
   #   build: ./mpi
-  #   deploy:
-  #     replicas: 2
+  #   depends_on:
+  #     - kafka

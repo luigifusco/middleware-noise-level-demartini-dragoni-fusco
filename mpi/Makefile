@@ -1,11 +1,12 @@
+CFLAGS=-Wall $(shell pkg-config --cflags --libs rdkafka) -lm
 
 default:
 	mkdir -p target
-	mpicc.openmpi -Wall src/sim.c -lm -o target/sim
+	mpicc.openmpi src/sim.c -o target/sim $(CFLAGS)
 
 debug:
 	mkdir -p target
-	mpicc.openmpi -Wall -fsanitize=address -g src/sim.c -lm -o target/sim
+	mpicc.openmpi -fsanitize=address -g src/sim.c -o target/sim $(CFLAGS)
 
 run: default
 	mpirun -np 6 target/sim

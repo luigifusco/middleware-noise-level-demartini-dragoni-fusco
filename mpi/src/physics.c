@@ -9,7 +9,7 @@ float distance(float x0, float y0, float x1, float y1) {
 }
 
 float distance_ang(float lat0, float lon0, float lat1, float lon1) {
-    const float l1 = lat0 * PI / 180; // φ, λ in radians
+    const float l1 = lat0 * PI / 180; // phi, lambda in radians
     const float l2 = lat1 * PI / 180;
     const float dlat = (lat1-lat0) * PI / 180;
     const float dlon = (lon1-lon0) * PI / 180;

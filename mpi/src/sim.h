@@ -31,6 +31,7 @@ typedef struct entity_t {
 } entity_t;
 
 typedef struct sensor_t {
+    char* id;
     float x;
     float y;
     double noise_mw;

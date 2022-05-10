@@ -41,16 +41,24 @@ MPI_Datatype define_sensor_dt() {
     return dt;
 }
 
-sensor_t* spawn_sensors(size_t n, bounds_t bounds) {
+sensor_t* sensor_spawn_n(size_t n, bounds_t bounds) {
   sensor_t* sensors = (sensor_t*)calloc(n, sizeof(sensor_t));
 
   for (int i = 0; i < n; i++) {
     sensors[i].x = rand_range_f(bounds.x0, bounds.x1);
     sensors[i].y = rand_range_f(bounds.y0, bounds.y1);
     sensors[i].noise_mw = 0.0;
+    sensors[i].id = NULL;
   }
 
   return sensors;
+}
+
+#define ID_MAX_LEN 64
+void sensor_gen_id(sensor_t* s) {
+  s->id = malloc(ID_MAX_LEN);
+  snprintf(s->id, ID_MAX_LEN , "sim-%03.6f-%03.6f", s->x, s->y);
+  s->id[ID_MAX_LEN-1] = 0x00;
 }
 
 void entity_step(entity_t* e, bounds_t bounds, float dt) {
@@ -96,6 +104,14 @@ void sensor_add_source(sensor_t *restrict s, const entity_t *restrict e) {
   s->noise_mw += contribution;
 }
 
+reading_msg_t sensor_get_reading(const sensor_t * s) {
+  reading_msg_t r;
+  r.id = strdup(s->id);
+  r.noise = lin_to_dbm(s->noise_mw);
+  r.ts = time(NULL);
+  return r;
+}
+
 // Process 0 selects a number num.
 // All other processes have an array that they filter to only keep the elements
 // that are multiples of num.
@@ -118,7 +134,8 @@ int main(int argc, char** argv) {
   int n_sensors, n_vehichles, n_people;
   bounds_t bounds;
   float v_p, v_v;
-  sensor_t* sensors;
+  sensor_t* sensors = NULL;
+  rd_kafka_t* kafka_p = NULL;
 
   if (my_rank == 0) {
     n_sensors = N_SENSORS;
@@ -133,7 +150,9 @@ int main(int argc, char** argv) {
     v_p = V_P;
     v_v = V_V;
 
-    sensors = spawn_sensors(n_sensors, bounds);
+    sensors = sensor_spawn_n(n_sensors, bounds);
+
+    kafka_p = kafka_build_producer("localhost:9093");
   }
 
   MPI_Bcast(&n_sensors, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -150,6 +169,9 @@ int main(int argc, char** argv) {
     sensors = calloc(n_sensors, sizeof(sensor_t));
   }
   MPI_Bcast(sensors, n_sensors, sensor_dt, 0, MPI_COMM_WORLD);
+  for (int j = 0; j < n_sensors; j++) {
+    sensor_gen_id(&sensors[j]);
+  }
 
   int n_entities = n_people + n_vehichles;
   entity_t* entities = (entity_t*)calloc(n_entities, sizeof(entity_t));
@@ -197,7 +219,11 @@ int main(int argc, char** argv) {
       }
     }
     if (my_rank == 0) {
-      send_readings(sensors, n_sensors);
+      for (int j = 0; j < n_sensors; j++) {
+        reading_msg_t r = sensor_get_reading(&sensors[j]);
+        kafka_send_reading(kafka_p, &r);
+        free(r.id);
+      }
       printf("%04d\n", i);
     }
     sleep(5);
@@ -206,6 +232,10 @@ int main(int argc, char** argv) {
 
   free(sensors);
   free(entities);
+
+  if (my_rank == 0) {
+    kafka_close(kafka_p);
+  }
 
   /// divide the entities counts between nodes
   /// each node spawns them at random positions
