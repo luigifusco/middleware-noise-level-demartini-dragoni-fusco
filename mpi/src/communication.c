@@ -6,12 +6,7 @@
 #include <librdkafka/rdkafka.h>
 
 #include "sim.h"
-
-typedef struct reading_msg_t {
-    char* id;
-    float noise;
-    long ts;
-} reading_msg_t;
+#include "communication.h"
 
 char* format_msg(const reading_msg_t *msg) {
     const char* FMT = "{\"id\"=\"%s\",\"noise\"=%f,\"ts\"=%ld}";
@@ -81,7 +76,7 @@ rd_kafka_t* kafka_build_producer(char* broker) {
 int kafka_send_reading(rd_kafka_t* producer, reading_msg_t* reading) {
     rd_kafka_resp_err_t err;
 
-    const char* topic = "poi-data";
+    const char* topic = "poi-data"; // TODO: read from config
 
     char* key = strdup(reading->id);
     const size_t key_len = strlen(key);

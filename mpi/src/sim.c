@@ -2,13 +2,16 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include <string.h>
 #include <mpi.h>
 #include <unistd.h>
 
+#include "toml/toml.h"
 #include "sim.h"
-#include "utils.c"
-#include "physics.c"
-#include "communication.c"
+#include "utils.h"
+#include "physics.h"
+#include "communication.h"
+#include "config.h"
 
 MPI_Datatype define_sensor_dt() {
     // float x;
@@ -118,7 +121,6 @@ reading_msg_t sensor_get_reading(const sensor_t * s) {
 // Process 0 collects the filtered arrays and print them.
 int main(int argc, char** argv) {
   /// DISTRIBUTE SENSORS
-
   // Init random number generator
   srand(entropy_seed());
 
@@ -134,25 +136,55 @@ int main(int argc, char** argv) {
   int n_sensors, n_vehichles, n_people;
   bounds_t bounds;
   float v_p, v_v;
+  float t_step;
   sensor_t* sensors = NULL;
   rd_kafka_t* kafka_p = NULL;
 
   if (my_rank == 0) {
-    n_sensors = N_SENSORS;
-    n_people = (N_P + world_size - 1) / world_size;
-    n_vehichles = (N_V + world_size - 1) / world_size;
+    if (argc != 2) {
+      printf("USAGE: sim TOML_CONFIG\n");
+      exit(1);
+    }
 
-    bounds.x0 = (float)LAT_0;
-    bounds.x1 = (float)LAT_1;
-    bounds.y0 = (float)LON_0;
-    bounds.y1 = (float)LON_1;
+    toml_table_t* conf = config_load(argv[1]);
+    toml_table_t* conf_sim = toml_table_get(conf, "simulation");
 
-    v_p = V_P;
-    v_v = V_V;
+    t_step = toml_double_get(conf_sim, "time_step");
 
-    sensors = sensor_spawn_n(n_sensors, bounds);
+    toml_table_t* conf_vechichles = toml_table_get(conf_sim, "vehichles");
+    toml_table_t* conf_people = toml_table_get(conf_sim, "people");
 
-    kafka_p = kafka_build_producer("localhost:9093");
+    int n_p = toml_int_get(conf_people, "number");
+    int n_v = toml_int_get(conf_vechichles, "number");
+    v_p = toml_double_get(conf_people, "velocity");
+    v_v = toml_double_get(conf_vechichles, "velocity");
+
+    n_people = (n_p + world_size - 1) / world_size;
+    n_vehichles = (n_v + world_size - 1) / world_size; // TODO: exact division
+
+    bounds.x0 = (float)toml_double_get(conf_sim, "lat_0");
+    bounds.x1 = (float)toml_double_get(conf_sim, "lat_1");
+    bounds.y0 = (float)toml_double_get(conf_sim, "lon_0");
+    bounds.y1 = (float)toml_double_get(conf_sim, "lon_1");
+
+    // TODO: configurable noise
+    toml_array_t* conf_sensors = toml_array_get(conf_sim, "sensor");
+    for (n_sensors = 0; toml_table_at(conf_sensors, n_sensors); n_sensors++);
+
+    sensors = (sensor_t*)calloc(n_sensors, sizeof(sensor_t));
+
+    for (int i = 0; i < n_sensors; i++) {
+      toml_table_t* s = toml_table_at(conf_sensors, i);
+      sensors[i].x = toml_double_get(s, "lat");
+      sensors[i].y = toml_double_get(s, "lon");
+      sensors[i].id = strdup(toml_string_get(s, "id"));
+      sensors[i].noise_mw = 0.0;
+    }
+
+    toml_table_t* conf_kafka = toml_table_get(conf, "kafka");
+    kafka_p = kafka_build_producer(toml_string_get(conf_kafka, "broker"));
+
+    toml_free(conf);
   }
 
   MPI_Bcast(&n_sensors, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -162,6 +194,7 @@ int main(int argc, char** argv) {
   MPI_Bcast(&bounds, 4, MPI_FLOAT, 0, MPI_COMM_WORLD);
   MPI_Bcast(&v_p, 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
   MPI_Bcast(&v_v, 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(&t_step, 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
   printf("%d %d %d\n", n_sensors, n_people, n_vehichles);
 
@@ -169,8 +202,10 @@ int main(int argc, char** argv) {
     sensors = calloc(n_sensors, sizeof(sensor_t));
   }
   MPI_Bcast(sensors, n_sensors, sensor_dt, 0, MPI_COMM_WORLD);
-  for (int j = 0; j < n_sensors; j++) {
-    sensor_gen_id(&sensors[j]);
+  if (my_rank != 0) {
+    for (int j = 0; j < n_sensors; j++) {
+      sensors[j].id = NULL; // The pointer which was broadcasted is not valid for the replicas
+    }
   }
 
   int n_entities = n_people + n_vehichles;
@@ -192,9 +227,10 @@ int main(int argc, char** argv) {
     }
   }
 
+  // Simulation loop
   for(int i = 0;; i++) {
     for (int i = 0; i < n_entities; i++) {
-      entity_step(&entities[i], bounds, TS);
+      entity_step(&entities[i], bounds, t_step);
     }
     for (int j = 0; j < n_sensors; j++) {
       sensors[j].noise_mw = 0;
@@ -226,7 +262,7 @@ int main(int argc, char** argv) {
       }
       printf("%04d\n", i);
     }
-    sleep(5);
+    sleep(2);
     MPI_Barrier(MPI_COMM_WORLD);
   }
 

@@ -1,6 +1,6 @@
 #include <math.h>
-
-#define EARTH_RADIUS 6371000.0
+#include "physics.h"
+#include "utils.h"
 
 float distance(float x0, float y0, float x1, float y1) {
     float dx = x1 - x0;

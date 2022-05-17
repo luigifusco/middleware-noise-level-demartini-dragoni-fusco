@@ -1,5 +1,5 @@
-#ifndef __COMM_H__
-#define __COMM_H__
+#ifndef __SIM_H__
+#define __SIM_H__
 
 #define LAT_0 45.0
 #define LON_0 9.0
