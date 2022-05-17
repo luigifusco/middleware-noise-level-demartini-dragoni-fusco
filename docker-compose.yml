@@ -82,7 +82,9 @@ services:
       - kafka
       - mosquitto
 
-  # mpi:
-  #   build: ./mpi
-  #   depends_on:
-  #     - kafka
+  mpi:
+    build: ./mpi
+    volumes:
+      - ./mpi/simulation.toml:/app/simulation.toml
+    depends_on:
+      - kafka

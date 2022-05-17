@@ -211,7 +211,7 @@
         "type": "function",
         "z": "9e2990e28006b0c1",
         "name": "Aggregator",
-        "func": "function ema(acc, x, alpha) {\n    return acc * (1.0 - alpha) + x * alpha;\n}\n\nfunction distance(lat0, lon0, lat1, lon1) {\n  let p = 0.017453292519943295;    // Math.PI / 180\n  let c = Math.cos;\n  let a = 0.5 - c((lat1 - lat0) * p)/2 + \n          c(lat0 * p) * c(lat1 * p) * \n          (1 - c((lon1 - lon0) * p))/2;\n\n  return 1000.0 * 12742.0 * Math.asin(Math.sqrt(a)); // 2 * R; R = 6371 km\n}\n\nfunction distance_factor(d) {\n    node.log(d);\n    const m = 20.0;\n    if (d < m) {\n        return 1.0;\n    } else {\n        return Math.exp((m - d)/50.0);\n    }\n}\n\nfunction update(poi, reading) {\n    let d = distance(poi.lat, poi.lon, reading.lat, reading.lon);\n    let alpha = 0.3 * reading.reliability * distance_factor(d);\n    \n    return ema(poi.noise, reading.noise, alpha);\n}\n\nif (msg.kind === \"sensor-data\") {\n    let map = context.get('map');\n    map = map.map(function(poi) {\n        poi.noise = update(poi, msg.payload);\n        return poi;\n    })\n    context.set('map', map);\n    \n    let kafkaMsgs = map.map(function(poi) {\n        return {\n            id: poi.id,\n            noise: poi.noise,\n            ts: Date.now(),\n        }\n    });\n    \n    return [kafkaMsgs];\n} else if (msg.kind === \"poi\") {\n    context.set('map', msg.payload);\n}\n",
+        "func": "function ema(acc, x, alpha) {\n    return acc * (1.0 - alpha) + x * alpha;\n}\n\nfunction distance(lat0, lon0, lat1, lon1) {\n  let p = 0.017453292519943295;    // Math.PI / 180\n  let c = Math.cos;\n  let a = 0.5 - c((lat1 - lat0) * p)/2 + \n          c(lat0 * p) * c(lat1 * p) * \n          (1 - c((lon1 - lon0) * p))/2;\n\n  return 1000.0 * 12742.0 * Math.asin(Math.sqrt(a)); // 2 * R; R = 6371 km\n}\n\nfunction distance_factor(d) {\n    const m = 20.0;\n    if (d < m) {\n        return 1.0;\n    } else {\n        return Math.exp((m - d)/50.0);\n    }\n}\n\nfunction update(poi, reading) {\n    let d = distance(poi.lat, poi.lon, reading.lat, reading.lon);\n    let alpha = 0.3 * reading.reliability * distance_factor(d);\n    \n    return ema(poi.noise, reading.noise, alpha);\n}\n\nif (msg.kind === \"sensor-data\") {\n    let map = context.get('map');\n    map = map.map(function(poi) {\n        poi.noise = update(poi, msg.payload);\n        return poi;\n    })\n    context.set('map', map);\n    \n    let kafkaMsgs = map.map(function(poi) {\n        return {\n            id: poi.id,\n            noise: poi.noise,\n            ts: Date.now(),\n        }\n    });\n    \n    return [kafkaMsgs];\n} else if (msg.kind === \"poi\") {\n    context.set('map', msg.payload);\n}\n",
         "outputs": 1,
         "noerr": 0,
         "initialize": "// Code added here will be run once\n// whenever the node is started.\nif (context.get(\"map\") === undefined) {\n    context.set(\"map\", [])\n}",
@@ -221,8 +221,8 @@
         "y": 180,
         "wires": [
             [
-                "200188dc75b1e30a",
-                "58ba75e0f6719d30"
+                "58ba75e0f6719d30",
+                "200188dc75b1e30a"
             ]
         ]
     },

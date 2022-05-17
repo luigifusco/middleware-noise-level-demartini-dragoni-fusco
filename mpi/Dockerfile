@@ -1,11 +1,16 @@
 FROM debian:11
 
 RUN apt-get update \
-    && apt-get install -y build-essential openmpi-bin librdkafka-dev
+    && apt-get install -y build-essential pkg-config openmpi-bin libopenmpi-dev librdkafka-dev
 
-COPY Makefile .
+WORKDIR /app
+
 COPY src/ ./src/
+COPY Makefile ./
+
+RUN useradd sim && chown -R sim:sim .
+USER sim
 
 RUN make
 
-ENTRYPOINT [ "mpirun", "-np", "6", "target/sim" ]
+ENTRYPOINT [ "mpirun", "-np", "6", "target/sim", "simulation.toml" ]
