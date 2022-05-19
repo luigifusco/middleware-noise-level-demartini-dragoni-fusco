@@ -4,6 +4,10 @@ import com.google.gson.Gson;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaPairRDD;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.api.java.JavaInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
@@ -73,14 +77,33 @@ public final class DataAnalytics {
 //                new Duration(3600000 * 24 * 7));
 //        var weekly_avg = weekly_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
 
-       //  top 10 points of interest with the highest level of noise over the last hour;
-
-
-        
 
         streamNoiseData.print();
         test_sum.print();
         test_avg.print();
+
+       //  top 10 points of interest with the highest level of noise over the last hour;
+        var sorted_swapper_hourly_avg = test_avg.mapToPair(Tuple2::swap).transformToPair(s -> s.sortByKey(false));
+
+        sorted_swapper_hourly_avg.print();
+
+        sorted_swapper_hourly_avg.foreachRDD(rdd -> {
+            String out = "\nSpark, Top 10 noises in the last hour: " + rdd.id() + "\n";
+
+            for (Tuple2<Float, String> t : rdd.take(4)){
+//          for (Tuple2<Float, String> t : rdd.take(10)){
+
+                    out = out + t.toString() + "\n";
+                }
+            }
+            System.out.println(out);
+        });
+
+
+
+
+
+
 
 
 
