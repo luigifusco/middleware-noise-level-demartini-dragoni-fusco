@@ -94,7 +94,6 @@ public final class DataAnalytics {
 //          for (Tuple2<Float, String> t : rdd.take(10)){
 
                     out = out + t.toString() + "\n";
-                }
             }
             System.out.println(out);
         });
