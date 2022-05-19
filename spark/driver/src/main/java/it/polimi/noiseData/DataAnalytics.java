@@ -62,22 +62,24 @@ public final class DataAnalytics {
 
         // real functions
 //        var hourly_sum = noises.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)),
-//                new Duration(16000));
+//                new Duration(3600000));
 //        var hourly_avg = hourly_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
 //
 //        var daily_sum = noises.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)),
-//                new Duration(16000));
+//                new Duration(3600000 * 24));
 //        var daily_avg = daily_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
 //
 //        var weekly_sum = noises.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)),
-//                new Duration(16000));
+//                new Duration(3600000 * 24 * 7));
 //        var weekly_avg = weekly_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
 
+       //  top 10 points of interest with the highest level of noise over the last hour;
 
-        System.out.println("STREAMING NOISE DATA");
+
+        
+
         streamNoiseData.print();
-
-        System.out.println("AVG");
+        test_sum.print();
         test_avg.print();
 
 
