@@ -7,16 +7,19 @@ services:
     ports:
       - "2181:2181"
     volumes:
-      - ./kafka-data:/bitnami
+      - zookeeper-data:/bitnami
     environment:
       - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOO_LOG_LEVEL=WARN
+    networks:
+      - backend
 
   kafka:
     image: bitnami/kafka:3.1
     ports:
       - "9093:9093"
     volumes:
-      - ./kafka-data:/bitnami
+      - kafka-data:/bitnami
     environment:
       - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
       - ALLOW_PLAINTEXT_LISTENER=yes
@@ -24,26 +27,32 @@ services:
       - KAFKA_CFG_LISTENERS=CLIENT://:9092,EXTERNAL://:9093
       - KAFKA_CFG_ADVERTISED_LISTENERS=CLIENT://kafka:9092,EXTERNAL://localhost:9093
       - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=CLIENT
+      - KAFKA_LOG_LEVEL=WARN
     depends_on:
-    - zookeeper
+      - zookeeper
+    networks:
+      - backend
 
   spark-master:
     build: ./spark/cluster
     volumes:
-      - ./spark-data:/data
+      - spark-data:/data
     ports:
       - "8080:8080"
       - "7077:7077"
     environment:
       - INIT_DAEMON_STEP=setup_spark
       - SPARK_MODE=master
+      - SPARK_LOG4J_LOGGERS=warn
+    networks:
+      - backend
+
   spark-worker:
     build: ./spark/cluster
     volumes:
-      - ./spark-data:/data
+      - spark-data:/data
     deploy:
       replicas: 1
-
     ports:
       - '8081:8081'
     depends_on:
@@ -52,23 +61,33 @@ services:
       - SPARK_MASTER=spark://spark-master:7077
       - SPARK_WORKER_MEMORY=2G
       - SPARK_WORKER_CORES=2
+      - SPARK_LOG4J_LOGGERS=warn
+    networks:
+      - backend
+
   spark-driver:
     build: ./spark/driver
     volumes:
-      - ./spark-data:/data
+      - spark-data:/data
     environment:
       - SPARK_MASTER=spark://spark-master:7077
       - SPARK_LOCAL_IP=spark-driver
+      - SPARK_LOG_LEVEL=WARN
     depends_on:
       - spark-master
       - kafka
+    networks:
+      - backend
+
   mosquitto:
     image: eclipse-mosquitto:2.0
     volumes:
-      - ./mosquitto-data:/mosquitto/data
+      - mosquitto-data:/mosquitto/data
       - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
     ports:
       - "1883:1883"
+    networks:
+      - edge
 
   node-red:
     image: nodered/node-red:latest
@@ -81,10 +100,49 @@ services:
     depends_on:
       - kafka
       - mosquitto
+    networks:
+      - backend
+      - edge
 
   mpi:
     build: ./mpi
+    entrypoint: mpirun -v -np 6 --host mpi-node-1:3,mpi-node-2:3 sim /app/simulation.toml
     volumes:
-      - ./mpi/simulation.toml:/app/simulation.toml
+      - sim-data:/app/
+      - ./mpi/simulation.toml:/app/simulation.toml:ro
     depends_on:
       - kafka
+      - mpi-node
+    networks:
+      - backend
+      - simulation
+
+  mpi-node-1:
+    build: ./mpi/node
+    networks:
+      - backend
+      - simulation
+    volumes:
+      - sim-data:/app/
+      - ./mpi/simulation.toml:/app/simulation.toml:ro
+
+  mpi-node-2:
+    build: ./mpi/node
+    networks:
+      - backend
+      - simulation
+    volumes:
+      - sim-data:/app/
+      - ./mpi/simulation.toml:/app/simulation.toml:ro
+
+networks:
+  backend:
+  edge:
+  simulation:
+
+volumes:
+  mosquitto-data:
+  spark-data:
+  kafka-data:
+  zookeeper-data:
+  sim-data:

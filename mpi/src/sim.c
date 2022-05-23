@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
   if (my_rank == 0) {
     if (argc != 2) {
       printf("USAGE: sim TOML_CONFIG\n");
-      exit(1);
+      exit(101);
     }
 
     toml_table_t* conf = config_load(argv[1]);

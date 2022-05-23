@@ -9,6 +9,8 @@ RUN wget ${BASE_URL}/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${H
     && mv spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} /spark \
     && rm spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz
 
+RUN sed -E "s|^log4j\.rootCategory=INFO|log4j.rootCategory=WARN|" /spark/conf/log4j.properties.template > /spark/conf/log4j.properties
+
 WORKDIR /app
 
 COPY pom.xml ./
