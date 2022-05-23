@@ -106,9 +106,8 @@ services:
 
   mpi:
     build: ./mpi
-    entrypoint: mpirun -v -np 6 --host mpi-node-1:3,mpi-node-2:3 sim /app/simulation.toml
+    # entrypoint: /app/deploy.sh mpi-node-1 mpi-node-2
     volumes:
-      - sim-data:/app/
       - ./mpi/simulation.toml:/app/simulation.toml:ro
     depends_on:
       - kafka
@@ -117,23 +116,17 @@ services:
       - backend
       - simulation
 
-  mpi-node-1:
-    build: ./mpi/node
-    networks:
-      - backend
-      - simulation
-    volumes:
-      - sim-data:/app/
-      - ./mpi/simulation.toml:/app/simulation.toml:ro
+  # mpi-node-1:
+  #   build: ./mpi/node
+  #   networks:
+  #     - backend
+  #     - simulation
 
-  mpi-node-2:
-    build: ./mpi/node
-    networks:
-      - backend
-      - simulation
-    volumes:
-      - sim-data:/app/
-      - ./mpi/simulation.toml:/app/simulation.toml:ro
+  # mpi-node-2:
+  #   build: ./mpi/node
+  #   networks:
+  #     - backend
+  #     - simulation
 
 networks:
   backend:

@@ -12,5 +12,5 @@ clear:
 	docker compose rm -v -s -f
 
 reset:
-	docker compose rm -v -s
+	docker compose rm -v -s -f
 	docker compose up --build -d

@@ -57,13 +57,6 @@ sensor_t* sensor_spawn_n(size_t n, bounds_t bounds) {
   return sensors;
 }
 
-#define ID_MAX_LEN 64
-void sensor_gen_id(sensor_t* s) {
-  s->id = malloc(ID_MAX_LEN);
-  snprintf(s->id, ID_MAX_LEN , "sim-%03.6f-%03.6f", s->x, s->y);
-  s->id[ID_MAX_LEN-1] = 0x00;
-}
-
 void entity_step(entity_t* e, bounds_t bounds, float dt) {
   e->x += e->x_v * dt;
   e->y += e->y_v * dt;
@@ -196,7 +189,7 @@ int main(int argc, char** argv) {
   MPI_Bcast(&v_v, 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
   MPI_Bcast(&t_step, 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
-  printf("%d %d %d\n", n_sensors, n_people, n_vehichles);
+  printf("%d|\ts: %4d p: %4d v: %4d\n", my_rank, n_sensors, n_people, n_vehichles);
 
   if (my_rank != 0) {
     sensors = calloc(n_sensors, sizeof(sensor_t));
@@ -260,7 +253,7 @@ int main(int argc, char** argv) {
         kafka_send_reading(kafka_p, &r);
         free(r.id);
       }
-      printf("%04d\n", i);
+      printf("%04d\n", time(NULL));
     }
     sleep(2);
     MPI_Barrier(MPI_COMM_WORLD);

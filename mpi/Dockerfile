@@ -1,7 +1,7 @@
 FROM debian:11
 
 RUN apt-get update \
-    && apt-get install -y gcc make pkg-config openmpi-bin libopenmpi-dev librdkafka-dev
+    && apt-get install -y --no-install-recommends gcc make pkg-config openmpi-bin libopenmpi-dev librdkafka-dev
 
 ENV USER sim
 
@@ -19,7 +19,10 @@ ADD node/ssh/sim.pub ${SSHDIR}/authorized_keys
 RUN chmod -R 600 ${SSHDIR}/* && \
     chown -R ${USER}:${USER} ${SSHDIR}
 
-RUN mkdir /app && chown -R ${USER}:${USER} /app
+RUN mkdir /app
+ADD deploy.sh /app/
+
+RUN chown -R ${USER}:${USER} /app && chmod +x /app/deploy.sh
 
 USER sim
 WORKDIR /build
@@ -32,5 +35,6 @@ RUN make
 WORKDIR /app
 
 RUN cp /build/target/sim /app/sim
+
 
 ENTRYPOINT [ "mpirun", "sim", "simulation.toml" ]
