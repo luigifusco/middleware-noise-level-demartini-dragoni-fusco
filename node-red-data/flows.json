@@ -39,7 +39,7 @@
         "z": "9e2990e28006b0c1",
         "name": "Recv sensor data",
         "topic": "sensor/data",
-        "qos": "1",
+        "qos": "0",
         "datatype": "json",
         "broker": "c5c14dcb012cf313",
         "nl": false,
@@ -50,7 +50,7 @@
         "y": 180,
         "wires": [
             [
-                "e1f4aece9e250923"
+                "2eafb52bbc68a04c"
             ]
         ]
     },
@@ -59,7 +59,7 @@
         "type": "function",
         "z": "9e2990e28006b0c1",
         "name": "Kafka producer",
-        "func": "const producer = context.get('producer')\n\nconst run = async () => {\n  // Producing\n  await producer.connect()\n  await producer.send({\n    topic: 'poi-data',\n    messages: [\n      { \n          key: msg.id,\n          value: JSON.stringify(msg)\n      },\n    ],\n  })\n}\n\nrun().catch(node.error)",
+        "func": "function serializeValue(msg) {\n    return {\n        key: msg.key,\n        value: JSON.stringify(msg.value)\n    }\n}\n\nconst producer = context.get('producer')\n\nconst run = async () => {\n  // Producing\n  await producer.connect();\n  await producer.send({\n    topic: msg.topic,\n    messages: msg.payload.map(serializeValue)\n  });\n}\n\nrun().catch(node.error)",
         "outputs": 0,
         "noerr": 0,
         "initialize": "// Code added here will be run once\n// whenever the node is started.\nconst kafka = new kafkajs.Kafka({\n  clientId: 'client',\n  brokers: ['kafka:9092']\n})\n\ncontext.set('producer', kafka.producer());\n",
@@ -70,8 +70,8 @@
                 "module": "kafkajs"
             }
         ],
-        "x": 1200,
-        "y": 180,
+        "x": 1360,
+        "y": 120,
         "wires": [],
         "icon": "node-red/bridge-dash.svg"
     },
@@ -89,7 +89,7 @@
         "correl": "",
         "expiry": "",
         "broker": "c5c14dcb012cf313",
-        "x": 430,
+        "x": 730,
         "y": 440,
         "wires": []
     },
@@ -97,28 +97,18 @@
         "id": "dfbd66c3812f6e30",
         "type": "inject",
         "z": "9e2990e28006b0c1",
-        "name": "Fake gateway w/ pos",
-        "props": [
-            {
-                "p": "payload"
-            },
-            {
-                "p": "topic",
-                "vt": "str"
-            }
-        ],
-        "repeat": "5",
+        "name": "Fake sensor trigger",
+        "props": [],
+        "repeat": "1",
         "crontab": "",
         "once": true,
         "onceDelay": "0.5",
-        "topic": "sensor/data",
-        "payload": "{\"noise\":76.6,\"ts\":1649164799169,\"reliability\":0.7,\"lat\":45.4785374,\"lon\":9.2300135}",
-        "payloadType": "json",
+        "topic": "",
         "x": 160,
         "y": 440,
         "wires": [
             [
-                "3f551a844f02a43a"
+                "d50d17ae523f7d4a"
             ]
         ]
     },
@@ -169,7 +159,7 @@
         "type": "debug",
         "z": "9e2990e28006b0c1",
         "name": "",
-        "active": true,
+        "active": false,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -177,7 +167,7 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 1170,
+        "x": 1190,
         "y": 20,
         "wires": []
     },
@@ -210,15 +200,15 @@
         "id": "1b1b1a2359d7fb77",
         "type": "function",
         "z": "9e2990e28006b0c1",
-        "name": "Aggregator",
-        "func": "function ema(acc, x, alpha) {\n    return acc * (1.0 - alpha) + x * alpha;\n}\n\nfunction distance(lat0, lon0, lat1, lon1) {\n  let p = 0.017453292519943295;    // Math.PI / 180\n  let c = Math.cos;\n  let a = 0.5 - c((lat1 - lat0) * p)/2 + \n          c(lat0 * p) * c(lat1 * p) * \n          (1 - c((lon1 - lon0) * p))/2;\n\n  return 1000.0 * 12742.0 * Math.asin(Math.sqrt(a)); // 2 * R; R = 6371 km\n}\n\nfunction distance_factor(d) {\n    const m = 20.0;\n    if (d < m) {\n        return 1.0;\n    } else {\n        return Math.exp((m - d)/50.0);\n    }\n}\n\nfunction update(poi, reading) {\n    let d = distance(poi.lat, poi.lon, reading.lat, reading.lon);\n    let alpha = 0.3 * reading.reliability * distance_factor(d);\n    \n    return ema(poi.noise, reading.noise, alpha);\n}\n\nif (msg.kind === \"sensor-data\") {\n    let map = context.get('map');\n    map = map.map(function(poi) {\n        poi.noise = update(poi, msg.payload);\n        return poi;\n    })\n    context.set('map', map);\n    \n    let kafkaMsgs = map.map(function(poi) {\n        return {\n            id: poi.id,\n            noise: poi.noise,\n            ts: Date.now(),\n        }\n    });\n    \n    return [kafkaMsgs];\n} else if (msg.kind === \"poi\") {\n    context.set('map', msg.payload);\n}\n",
+        "name": "POI Aggregator",
+        "func": "function ema(acc, x, alpha) {\n    return acc * (1.0 - alpha) + x * alpha;\n}\n\nfunction distance(lat0, lon0, lat1, lon1) {\n  let p = 0.017453292519943295;    // Math.PI / 180\n  let c = Math.cos;\n  let a = 0.5 - c((lat1 - lat0) * p)/2 + \n          c(lat0 * p) * c(lat1 * p) * \n          (1 - c((lon1 - lon0) * p))/2;\n\n  return 1000.0 * 12742.0 * Math.asin(Math.sqrt(a)); // 2 * R; R = 6371 km\n}\n\nfunction distance_factor(d) {\n    const m = 20.0;\n    if (d < m) {\n        return 1.0;\n    } else {\n        return Math.exp((m - d)/50.0);\n    }\n}\n\nfunction update(poi, reading) {\n    let d = distance(poi.lat, poi.lon, reading.lat, reading.lon);\n    let alpha = 0.5 * reading.reliability * distance_factor(d);\n    \n    return ema(poi.noise, reading.noise, alpha);\n}\n\nif (msg.kind === \"sensor-data\") {\n    let map = context.get('map');\n    map = map.map(function(poi) {\n        poi.noise = update(poi, msg.payload);\n        return poi;\n    })\n    context.set('map', map);\n} else if (msg.kind === \"update\") {\n    let map = context.get('map');\n    let kafkaMsgs = map.map(function(poi) {\n        return {\n            key: poi.id,\n            value: {\n                id: poi.id,\n                noise: poi.noise,\n                ts: Date.now(),\n            }\n        }\n    });\n    if (kafkaMsgs.length > 0) {\n        return {\n            topic: 'poi-data',\n            payload: kafkaMsgs,\n        }\n        \n    }\n} else if (msg.kind === \"poi\") {\n    context.set('map', msg.payload);\n}\n",
         "outputs": 1,
         "noerr": 0,
         "initialize": "// Code added here will be run once\n// whenever the node is started.\nif (context.get(\"map\") === undefined) {\n    context.set(\"map\", [])\n}",
         "finalize": "",
         "libs": [],
-        "x": 930,
-        "y": 180,
+        "x": 960,
+        "y": 60,
         "wires": [
             [
                 "58ba75e0f6719d30",
@@ -249,7 +239,8 @@
         "y": 60,
         "wires": [
             [
-                "1b1b1a2359d7fb77"
+                "1b1b1a2359d7fb77",
+                "a3e6da8de87ca913"
             ]
         ]
     },
@@ -276,7 +267,136 @@
         "y": 180,
         "wires": [
             [
+                "1b1b1a2359d7fb77",
+                "a3e6da8de87ca913"
+            ]
+        ]
+    },
+    {
+        "id": "2eafb52bbc68a04c",
+        "type": "function",
+        "z": "9e2990e28006b0c1",
+        "name": "Data cleaning",
+        "func": "\nif (msg.payload.lat == undefined || msg.payload.lat == undefined || msg.payload.noise == undefined) {\n    return;\n}\nif (msg.payload.lat < -180.0 || msg.payload.lat > 180.0 || msg.payload.lon < -90.0 || msg.payload.lon > 90.0) {\n    node.log(\"Invalid GPS coordinates\");\n    return;\n}\nif (msg.payload.noise < 0.0 || msg.payload.noise > 200.0) {\n    node.log(\"Invalid noise data\");\n    return;\n}\nif (msg.payload.reliability == undefined) {\n    msg.payload.reliability = 0.5;\n    return;\n} else if (msg.payload.reliability < 0.0 || msg.payload.reliability > 1.0) {\n    node.log(\"Invalid reliability data\");\n    return;\n}\n\n// Remove any additional fields\nmsg.payload = {\n    noise: msg.payload.noise,\n    lat: msg.payload.lat,\n    lon: msg.payload.lon,\n    reliability: msg.payload.reliability,\n}\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 180,
+        "wires": [
+            [
+                "e1f4aece9e250923"
+            ]
+        ]
+    },
+    {
+        "id": "a3e6da8de87ca913",
+        "type": "function",
+        "z": "9e2990e28006b0c1",
+        "name": "Enrichment",
+        "func": "function distance(lat0, lon0, lat1, lon1) {\n  let p = 0.017453292519943295;    // Math.PI / 180\n  let c = Math.cos;\n  let a = 0.5 - c((lat1 - lat0) * p)/2 + \n          c(lat0 * p) * c(lat1 * p) * \n          (1 - c((lon1 - lon0) * p))/2;\n\n  return 1000.0 * 12742.0 * Math.asin(Math.sqrt(a)); // 2 * R; R = 6371 km\n}\n\nif (msg.kind === \"sensor-data\") {\n    let map = context.get('map');\n    let closest = map\n        .map(poi => {\n            let d = distance(poi.lat, poi.lon, msg.payload.lan, msg.payload.lon);\n            return [d, poi.id];\n        })\n        .reduce((a, b) => a[0] < b[0] ? a : b);\n    \n    msg.topic = 'sensor-data';\n    msg.payload.poi = closest[1];\n    msg.payload = { value: msg.payload };\n    \n    return msg;\n} else if (msg.kind === \"poi\") {\n    context.set('map', msg.payload);\n}\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 950,
+        "y": 180,
+        "wires": [
+            [
+                "5dcefef203c0f21f",
+                "713fec3d6c9a3d3a"
+            ]
+        ]
+    },
+    {
+        "id": "713fec3d6c9a3d3a",
+        "type": "debug",
+        "z": "9e2990e28006b0c1",
+        "name": "",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1150,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "5dcefef203c0f21f",
+        "type": "join",
+        "z": "9e2990e28006b0c1",
+        "name": "",
+        "mode": "custom",
+        "build": "array",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "accumulate": false,
+        "timeout": "5",
+        "count": "",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 1150,
+        "y": 180,
+        "wires": [
+            [
+                "58ba75e0f6719d30"
+            ]
+        ]
+    },
+    {
+        "id": "6129518b729f8dd5",
+        "type": "inject",
+        "z": "9e2990e28006b0c1",
+        "name": "POI trigger update",
+        "props": [
+            {
+                "p": "kind",
+                "v": "update",
+                "vt": "str"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "5",
+        "topic": "",
+        "x": 690,
+        "y": 20,
+        "wires": [
+            [
                 "1b1b1a2359d7fb77"
+            ]
+        ]
+    },
+    {
+        "id": "d50d17ae523f7d4a",
+        "type": "function",
+        "z": "9e2990e28006b0c1",
+        "name": "Random reading",
+        "func": "let reading = {\n    noise: Math.random() * 80 + 20,\n    ts: Date.now(),\n    reliability: Math.random() * 0.5 + 0.5,\n    lat: Math.random() * 0.005 + 45.475,\n    lon: Math.random() * 0.005 + 9.226,\n}\n\nreturn {\n    payload: reading,\n    topic: 'sensor/data'\n};",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 470,
+        "y": 440,
+        "wires": [
+            [
+                "3f551a844f02a43a"
             ]
         ]
     }

@@ -7,7 +7,7 @@ lat_0 = 45.0
 lon_0 = 9.0
 lat_1 = 45.01
 lon_1 = 9.01
-time_step = 5
+time_step = 3
 
 [simulation.vehichles]
 number = 250

@@ -255,7 +255,7 @@ int main(int argc, char** argv) {
       }
       printf("%04d\n", time(NULL));
     }
-    sleep(2);
+    sleep((unsigned int)(t_step + 0.5));
     MPI_Barrier(MPI_COMM_WORLD);
   }
 
