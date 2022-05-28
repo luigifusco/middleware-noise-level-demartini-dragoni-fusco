@@ -111,7 +111,7 @@ services:
       - ./mpi/simulation.toml:/app/simulation.toml:ro
     depends_on:
       - kafka
-      # - mpi-node
+    #  - mpi-node
     networks:
       - backend
       - simulation

@@ -4,23 +4,24 @@ import com.google.gson.Gson;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaPairRDD;
-import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.PairFunction;
+import org.apache.spark.api.java.function.Function2;
+import org.apache.spark.api.java.function.Function3;
 import org.apache.spark.streaming.Duration;
+import org.apache.spark.streaming.State;
 import org.apache.spark.streaming.api.java.JavaInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka010.ConsumerStrategies;
 import org.apache.spark.streaming.kafka010.KafkaUtils;
 import org.apache.spark.streaming.kafka010.LocationStrategies;
+import scala.Serializable;
 import scala.Tuple2;
+
 
 import java.util.*;
 import java.util.regex.Pattern;
 
 
-public final class DataAnalytics {
+public final class DataAnalytics implements Serializable {
     private static final Pattern SPACE = Pattern.compile(" ");
 
     public static void main(String[] args) throws Exception {
@@ -56,6 +57,7 @@ public final class DataAnalytics {
         });
 
         // hourly,daily,and weekly moving average of noise level, for each point of interest;
+        // tuples with id of the poi, an integer for the sum and the noise of the poi
         var noises = streamNoiseData.mapValues((n) -> new Tuple2<>(1, n.getNoise()));
 
         // testing
@@ -77,38 +79,42 @@ public final class DataAnalytics {
 //                new Duration(3600000 * 24 * 7));
 //        var weekly_avg = weekly_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
 
-
-        streamNoiseData.print();
-        test_sum.print();
-        test_avg.print();
+    //    streamNoiseData.print();
+     //   test_sum.print();
+       // test_avg.print();
 
        //  top 10 points of interest with the highest level of noise over the last hour;
+        // reduce by key and window, e dentro prendo il massimo di ogni noise. poi prendo i noise con i migliori 10 valori
+        // con il massimo faccio la reduction:
         var sorted_swapper_hourly_avg = test_avg.mapToPair(Tuple2::swap).transformToPair(s -> s.sortByKey(false));
 
-        sorted_swapper_hourly_avg.print();
-
-        sorted_swapper_hourly_avg.foreachRDD(rdd -> {
-            String out = "\nSpark, Top 10 noises in the last hour: " + rdd.id() + "\n";
-
-            for (Tuple2<Float, String> t : rdd.take(4)){
-//          for (Tuple2<Float, String> t : rdd.take(10)){
-
-                    out = out + t.toString() + "\n";
+/*
+        var max = streamNoiseData.reduceByKeyAndWindow(new Function2<NoiseData, NoiseData, NoiseData>() {
+            @Override
+            public NoiseData call(NoiseData noise1, NoiseData noise2){
+                if (noise1.getNoise() < noise2.getNoise()) {
+                    return noise2;
+                }
+                return noise1;
             }
-            System.out.println(out);
+        }, new Duration(10000))
+                .map(a -> new Tuple2<>(a._2.getId(), a._2.getNoise()))
+                .mapToPair(Tuple2::swap)
+                .transformToPair(s -> s.sortByKey(false));
+*/
+        //  max.print();
+        var s = streamNoiseData.map(n -> {
+            var t = new Tuple2<String, Float>(n._1,n._2.getNoise());
+            var l = new ArrayList<Tuple2<String, Float>>();
+            l.add(t);
+            return l;
         });
 
-
-
-
-
-
-
-
-
-
+        s.print();
 
         streamingContext.start();
+
+
 
         try {
             streamingContext.awaitTermination();
