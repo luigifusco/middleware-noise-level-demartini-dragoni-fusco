@@ -90,7 +90,7 @@ services:
       - edge
 
   node-red:
-    image: nodered/node-red:latest
+    build: ./node-red
     environment:
       - TZ=Europe/Rome
     ports:
