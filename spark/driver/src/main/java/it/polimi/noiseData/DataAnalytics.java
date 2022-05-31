@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.Function3;
 import org.apache.spark.streaming.Duration;
@@ -23,6 +24,9 @@ import java.util.regex.Pattern;
 
 public final class DataAnalytics implements Serializable {
     private static final Pattern SPACE = Pattern.compile(" ");
+
+    private static final int minutes = 200;
+
 
     public static void main(String[] args) throws Exception {
 
@@ -61,66 +65,91 @@ public final class DataAnalytics implements Serializable {
         var noises = streamNoiseData.mapValues((n) -> new Tuple2<>(1, n.getNoise()));
 
         // testing
-        var test_sum = noises.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)),
-                            new Duration(16000));
-        var test_avg = test_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
-
 
         // real functions
-//        var hourly_sum = noises.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)),
-//                new Duration(3600000));
-//        var hourly_avg = hourly_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
-//
-//        var daily_sum = noises.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)),
-//                new Duration(3600000 * 24));
-//        var daily_avg = daily_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
-//
-//        var weekly_sum = noises.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)),
-//                new Duration(3600000 * 24 * 7));
-//        var weekly_avg = weekly_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
+        var hourly_sum = noises.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)),
+                new Duration(60 * minutes));
+        var hourly_avg = hourly_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
 
-    //    streamNoiseData.print();
-     //   test_sum.print();
-       // test_avg.print();
+        var daily_sum = noises.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)),
+                new Duration(24 * 60 * minutes));
+        var daily_avg = daily_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
 
-       //  top 10 points of interest with the highest level of noise over the last hour;
-        // reduce by key and window, e dentro prendo il massimo di ogni noise. poi prendo i noise con i migliori 10 valori
-        // con il massimo faccio la reduction:
-        var sorted_swapper_hourly_avg = test_avg.mapToPair(Tuple2::swap).transformToPair(s -> s.sortByKey(false));
+        var weekly_sum = noises.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)),
+                new Duration(7 * 24 * 60 * minutes));
+        var weekly_avg = weekly_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
 
-/*
-        var max = streamNoiseData.reduceByKeyAndWindow(new Function2<NoiseData, NoiseData, NoiseData>() {
-            @Override
-            public NoiseData call(NoiseData noise1, NoiseData noise2){
-                if (noise1.getNoise() < noise2.getNoise()) {
-                    return noise2;
-                }
-                return noise1;
-            }
-        }, new Duration(10000))
-                .map(a -> new Tuple2<>(a._2.getId(), a._2.getNoise()))
-                .mapToPair(Tuple2::swap)
-                .transformToPair(s -> s.sortByKey(false));
-*/
-        //  max.print();
-        var s = streamNoiseData.map(n -> {
-            var t = new Tuple2<String, Float>(n._1,n._2.getNoise());
+
+        hourly_avg.print();
+        daily_avg.print();
+        weekly_avg.print();
+
+        //  top 10 points of interest with the highest level of noise over the last hour;
+        var noiseStreamList = streamNoiseData.map(n -> {
+            var t = new Tuple2<String, Float>(n._2.getId(), n._2.getNoise());
             var l = new ArrayList<Tuple2<String, Float>>();
             l.add(t);
             return l;
         });
 
-        s.print();
+        var sortedNoiseStreamList = noiseStreamList
+                .reduceByWindow( DataAnalytics::mergeTop10,
+                        new Duration(60 * minutes),
+                        new Duration(60 * minutes));
+
+        sortedNoiseStreamList.print();
+
+
 
         streamingContext.start();
-
-
-
         try {
             streamingContext.awaitTermination();
         } catch (final InterruptedException e) {
             e.printStackTrace();
         }
+
+    }
+
+
+    private static ArrayList<Tuple2<String, Float>> mergeTop10(List<Tuple2<String, Float>> list1, List<Tuple2<String, Float>> list2) {
+        int i1 = 0;
+        int i2 = 0;
+
+        // merge
+        var mergedList = new ArrayList<Tuple2<String, Float>>();
+        while (i1 < list1.size() && i2 < list2.size()) {
+            if ( list1.get(i1)._2 > list2.get(i2)._2) {
+                mergedList.add(list1.get(i1++));
+            }
+            else {
+                mergedList.add(list2.get(i2++));
+            }
+        }
+
+        while (i1 < list1.size()){
+            mergedList.add(list1.get(i1++));
+        }
+
+        while (i2 < list2.size()){
+            mergedList.add(list2.get(i2++));
+        }
+
+
+        // remove duplicates
+        var set = new HashSet<>();
+        var finalList = new ArrayList<Tuple2<String, Float>>();
+        for(var m : mergedList){
+            if(!set.contains(m._1)){
+                set.add(m._1);
+                finalList.add(m);
+            }
+            if(finalList.size() == 10)
+                break;
+        }
+
+
+        return finalList;
+
 
     }
 }
