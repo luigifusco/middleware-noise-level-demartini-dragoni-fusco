@@ -1,9 +1,0 @@
-{
-    "name": "noise-data-node-red",
-    "description": "A Node-RED Project",
-    "version": "0.0.1",
-    "private": true,
-    "dependencies": {
-        "kafkajs": "^1.16.0"
-    }
-}

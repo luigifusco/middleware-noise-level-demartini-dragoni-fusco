@@ -1,5 +1,12 @@
-FROM nodered/node-red:latest
+FROM nodered/node-red
 
-RUN npm install kafkajs
+WORKDIR /data
+USER node-red
 
-RUN mkdir /data/node_modules && cp -r node_modules/kafkajs /data/node_modules/kafkajs
+COPY package.json .
+RUN npm install --unsafe-perm --no-update-notifier --no-fund --only=production
+
+COPY settings.js /data/settings.js
+COPY flows_cred.json /data/flows_cred.json
+COPY flows.json /data/flows.json
+

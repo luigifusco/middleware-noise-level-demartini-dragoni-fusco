@@ -96,7 +96,7 @@ services:
     ports:
       - "1880:1880"
     volumes:
-      - ./node-red-data:/data
+      - ./node-red-data:/data/input
     depends_on:
       - kafka
       - mosquitto
