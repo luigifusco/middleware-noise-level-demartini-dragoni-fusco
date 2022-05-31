@@ -160,6 +160,8 @@ static struct etimer publish_periodic_timer;
 static struct ctimer ct;
 static char *buf_ptr;
 static uint16_t seq_nr_value = 0;
+static float lat;
+static float lon;
 /*---------------------------------------------------------------------------*/
 static mqtt_client_config_t conf;
 /*---------------------------------------------------------------------------*/
@@ -326,6 +328,13 @@ update_config(void)
   return;
 }
 /*---------------------------------------------------------------------------*/
+static float
+get_rand_between(float a, float b) {
+  float diff = b - a;
+  float r = (float)rand() / (float)RAND_MAX;
+  return a + r * diff;
+}
+
 static void
 init_config()
 {
@@ -340,6 +349,10 @@ init_config()
 
   conf.broker_port = DEFAULT_BROKER_PORT;
   conf.pub_interval = DEFAULT_PUBLISH_INTERVAL;
+//45.480905, 9.223571
+//45.473280, 9.234783
+  lat = get_rand_between(45.473280, 45.480905);
+  lon = get_rand_between(9.223571, 9.234783);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -374,10 +387,12 @@ publish(void)
 
   len = snprintf(buf_ptr, remaining,
                  "{"
+		 "\"lat\":%f,"
+		 "\"lon\":%f,"
                  "\"noise\":%f,"
                  "\"reliability\":%f"
                  "}",
-                 get_noise_average(), (float)rand()/(float)RAND_MAX); 
+                 lat, lon, get_noise_average(), (float)rand()/(float)RAND_MAX); 
 
   if(len < 0 || len >= remaining) {
     LOG_ERR("Buffer too short. Have %d, need %d + \\0\n", remaining, len);
