@@ -5,18 +5,20 @@ import org.apache.spark.api.java.Optional;
 
 public class StreakState implements Serializable {
     private final float t;
-    private int currentValue;
-    private int maxValue;
+    private long currentValue;
+    private long maxValue;
+    private long baseTimestamp;
 
 
-    public Optional<Integer> updateState(Float noise) {
+    public Optional<Long> updateState(NoiseData noise) {
         // if the noise is less than t, reset the current value
-        if (noise < t) {
+        if (noise.getNoise() > t) {
             this.currentValue = 0;
-        }
-        else {
-            this.currentValue ++;
-            if(this.currentValue > maxValue) {
+            baseTimestamp = noise.getTs();
+            // mi salvo il timestamp corrente, che sarebbe quando sono
+        } else {
+            this.currentValue = noise.getTs() - baseTimestamp;
+            if (this.currentValue > maxValue) {
                 this.maxValue = this.currentValue;
                 return Optional.of(this.maxValue);
             }
@@ -27,23 +29,35 @@ public class StreakState implements Serializable {
     public StreakState(float t) {
         this.currentValue = 0;
         this.maxValue = 0;
+        this.baseTimestamp = 0;
         this.t = t;
     }
 
-    public int getCurrentValue() {
+    public float getT() {
+        return t;
+    }
+
+    public long getCurrentValue() {
         return currentValue;
     }
 
-
-    public int getMaxValue() {
-        return maxValue;
-    }
-
-    public void setCurrentValue(int currentValue) {
+    public void setCurrentValue(long currentValue) {
         this.currentValue = currentValue;
     }
 
-    public void setMaxValue(int maxValue) {
+    public long getMaxValue() {
+        return maxValue;
+    }
+
+    public void setMaxValue(long maxValue) {
         this.maxValue = maxValue;
+    }
+
+    public long getBaseTimestamp() {
+        return baseTimestamp;
+    }
+
+    public void setBaseTimestamp(long baseTimestamp) {
+        this.baseTimestamp = baseTimestamp;
     }
 }

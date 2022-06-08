@@ -99,16 +99,16 @@ public final class DataAnalytics implements Serializable {
 
 
         // point of interest with the longest streak of good noise level
-         var streakValues = streamNoiseData.mapWithState(StateSpec.function(new Function3<String, Optional<NoiseData>, State<StreakState>, Optional<Tuple2<String, Integer>>>() {
+         var streakValues = streamNoiseData.mapWithState(StateSpec.function(new Function3<String, Optional<NoiseData>, State<StreakState>, Optional<Tuple2<String, Long>>>() {
              @Override
-             public Optional<Tuple2<String,Integer>> call(String s, Optional<NoiseData> noiseData, State<StreakState> state) throws Exception {
-                 int T = 80;
+             public Optional<Tuple2<String,Long>> call(String s, Optional<NoiseData> noiseData, State<StreakState> state) throws Exception {
+                 int T = 69;
                  if (!state.exists()) {
                      state.update(new StreakState(T));
                  }
 
                  StreakState streakState = state.get();
-                 Optional<Integer> result = streakState.updateState(noiseData.get().getNoise());
+                 Optional<Long> result = streakState.updateState(noiseData.get());
                  state.update(streakState);
 
                  if(result.isPresent())
