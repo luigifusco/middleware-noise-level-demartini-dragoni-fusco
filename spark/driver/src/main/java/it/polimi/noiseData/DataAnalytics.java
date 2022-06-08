@@ -4,11 +4,11 @@ import com.google.gson.Gson;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.Function2;
+import org.apache.spark.api.java.Optional;
 import org.apache.spark.api.java.function.Function3;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.State;
+import org.apache.spark.streaming.StateSpec;
 import org.apache.spark.streaming.api.java.JavaInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka010.ConsumerStrategies;
@@ -38,7 +38,7 @@ public final class DataAnalytics implements Serializable {
         NoiseData noise = new NoiseData();
 
         Map<String, Object> kafkaParams = new HashMap<>();
-        kafkaParams.put("bootstrap.servers", "kafka:9092");
+        kafkaParams.put("bootstrap.servers", brokers);
         kafkaParams.put("key.deserializer", StringDeserializer.class);
         kafkaParams.put("value.deserializer", StringDeserializer.class);
         kafkaParams.put("group.id", "use_a_separate_group_id_for_each_stream");
@@ -47,15 +47,16 @@ public final class DataAnalytics implements Serializable {
 
         SparkConf sparkConf = new SparkConf().setAppName("JavaKafkaIntegration");
         JavaStreamingContext streamingContext = new JavaStreamingContext(sparkConf, new Duration(2000));
+        streamingContext.checkpoint("/data");
 
-        JavaInputDStream<ConsumerRecord<String, String>> streamString =
+        JavaInputDStream<ConsumerRecord<String, String>> streamJson =
                 KafkaUtils.createDirectStream(
                         streamingContext,
                         LocationStrategies.PreferConsistent(),
                         ConsumerStrategies.<String, String>Subscribe(topics, kafkaParams)
                 );
 
-        var streamNoiseData = streamString.mapToPair(record -> {
+        var streamNoiseData = streamJson.mapToPair(record -> {
             NoiseData data = new Gson().fromJson(record.value(), NoiseData.class);
             return new Tuple2<>(record.key(), data);
         });
@@ -64,9 +65,6 @@ public final class DataAnalytics implements Serializable {
         // tuples with id of the poi, an integer for the sum and the noise of the poi
         var noises = streamNoiseData.mapValues((n) -> new Tuple2<>(1, n.getNoise()));
 
-        // testing
-
-        // real functions
         var hourly_sum = noises.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)),
                 new Duration(60 * minutes));
         var hourly_avg = hourly_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
@@ -79,10 +77,10 @@ public final class DataAnalytics implements Serializable {
                 new Duration(7 * 24 * 60 * minutes));
         var weekly_avg = weekly_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
 
+        // hourly_avg.print();
+        // daily_avg.print();
+        // weekly_avg.print();
 
-        hourly_avg.print();
-        daily_avg.print();
-        weekly_avg.print();
 
         //  top 10 points of interest with the highest level of noise over the last hour;
         var noiseStreamList = streamNoiseData.map(n -> {
@@ -100,6 +98,29 @@ public final class DataAnalytics implements Serializable {
         sortedNoiseStreamList.print();
 
 
+        // point of interest with the longest streak of good noise level
+         var streakValues = streamNoiseData.mapWithState(StateSpec.function(new Function3<String, Optional<NoiseData>, State<StreakState>, Optional<Tuple2<String, Integer>>>() {
+             @Override
+             public Optional<Tuple2<String,Integer>> call(String s, Optional<NoiseData> noiseData, State<StreakState> state) throws Exception {
+                 int T = 80;
+                 if (!state.exists()) {
+                     state.update(new StreakState(T));
+                 }
+
+                 StreakState streakState = state.get();
+                 Optional<Integer> result = streakState.updateState(noiseData.get().getNoise());
+                 state.update(streakState);
+
+                 if(result.isPresent())
+                     return Optional.of(new Tuple2<>(noiseData.get().getId(), result.get()));
+                 else
+                     return Optional.empty();
+         }}));
+
+         var v = streakValues.filter(Optional::isPresent)
+                 .map(Optional::get);
+
+         v.print();
 
         streamingContext.start();
         try {
@@ -125,15 +146,12 @@ public final class DataAnalytics implements Serializable {
                 mergedList.add(list2.get(i2++));
             }
         }
-
         while (i1 < list1.size()){
             mergedList.add(list1.get(i1++));
         }
-
         while (i2 < list2.size()){
             mergedList.add(list2.get(i2++));
         }
-
 
         // remove duplicates
         var set = new HashSet<>();
@@ -147,9 +165,6 @@ public final class DataAnalytics implements Serializable {
                 break;
         }
 
-
         return finalList;
-
-
     }
 }
