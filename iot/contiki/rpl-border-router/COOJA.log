@@ -1,5 +1,5 @@
-[23:44:19 - main] [Cooja.java:1350] [INFO] - > Starting Cooja
-[23:44:19 - main] [Cooja.java:2856] [INFO] - External tools default settings: /external_tools_linux.config
-[23:44:19 - main] [Cooja.java:2886] [INFO] - External tools user settings: /home/user/.cooja.user.properties
-[23:44:19 - main] [Cooja.java:1356] [INFO] - > Creating simulation
-[23:44:22 - main] [Cooja.java:1361] [FATAL] - No simulation, aborting quickstart
+[17:58:59 - main] [Cooja.java:1350] [INFO] - > Starting Cooja
+[17:58:59 - main] [Cooja.java:2856] [INFO] - External tools default settings: /external_tools_linux.config
+[17:58:59 - main] [Cooja.java:2886] [INFO] - External tools user settings: /home/user/.cooja.user.properties
+[17:58:59 - main] [Cooja.java:1356] [INFO] - > Creating simulation
+[17:59:04 - main] [Cooja.java:1361] [FATAL] - No simulation, aborting quickstart
