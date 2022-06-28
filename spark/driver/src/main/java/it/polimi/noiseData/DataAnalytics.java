@@ -61,12 +61,16 @@ public final class DataAnalytics implements Serializable {
             return new Tuple2<>(record.key(), data);
         });
 
+
+
         // hourly,daily,and weekly moving average of noise level, for each point of interest;
         // tuples with id of the poi, an integer for the sum and the noise of the poi
         var noises = streamNoiseData.mapValues((n) -> new Tuple2<>(1, n.getNoise()));
 
         var hourly_sum = noises.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)),
-                new Duration(60 * minutes));
+                // new Duration(60 * minutes));
+                new Duration(6000));
+        // var hourly_avg = hourly_sum.mapValues((a) -> a._2 / a._1);
         var hourly_avg = hourly_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
 
         var daily_sum = noises.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)),
@@ -77,7 +81,9 @@ public final class DataAnalytics implements Serializable {
                 new Duration(7 * 24 * 60 * minutes));
         var weekly_avg = weekly_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
 
-        // hourly_avg.print();
+
+        var jsonHourly = hourly_avg.map((h) -> new NoiseAverage(h._1, h._2).toJsonString(NoiseAverage.Type.HourlyAverage));
+        jsonHourly.print();
         // daily_avg.print();
         // weekly_avg.print();
 
@@ -95,7 +101,7 @@ public final class DataAnalytics implements Serializable {
                         new Duration(60 * minutes),
                         new Duration(60 * minutes));
 
-        sortedNoiseStreamList.print();
+        // sortedNoiseStreamList.print();
 
 
         // point of interest with the longest streak of good noise level
@@ -120,7 +126,7 @@ public final class DataAnalytics implements Serializable {
          var v = streakValues.filter(Optional::isPresent)
                  .map(Optional::get);
 
-         v.print();
+         //v.print();
 
         streamingContext.start();
         try {
