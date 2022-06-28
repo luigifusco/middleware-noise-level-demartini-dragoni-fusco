@@ -11,9 +11,12 @@ public class StreakState implements Serializable {
 
 
     public Optional<Long> updateState(NoiseData noise) {
-        // if the noise is less than t, reset the current value
+        // if the noise is higher than t, reset the current value
+        if (baseTimestamp == 0){
+            baseTimestamp = noise.getTs();
+        }
+
         if (noise.getNoise() > t) {
-            this.currentValue = 0;
             baseTimestamp = noise.getTs();
             // mi salvo il timestamp corrente, che sarebbe quando sono
         } else {

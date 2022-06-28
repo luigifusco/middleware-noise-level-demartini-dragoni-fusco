@@ -27,16 +27,13 @@ public class NoiseAverage implements Serializable {
         this.average = average;
     }
 
-    public String toJsonString(Type averageType) {
+    public String toJsonString() {
         return "{" +
                 "\"id\": \"" + id + "\"," +
-                "\"average\": \"" + average + "\"" +
+                "\"average\": " + average +
                 '}';
     }
 
-    enum Type {
-        HourlyAverage;
-    }
 }
 
 
