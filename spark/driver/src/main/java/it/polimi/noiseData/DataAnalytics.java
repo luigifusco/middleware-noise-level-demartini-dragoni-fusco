@@ -1,6 +1,9 @@
 package it.polimi.noiseData;
 
 import com.google.gson.Gson;
+
+import it.polimi.noiseData.utils.MergeList;
+
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.spark.SparkConf;
@@ -17,16 +20,14 @@ import org.apache.spark.streaming.kafka010.LocationStrategies;
 import scala.Serializable;
 import scala.Tuple2;
 
-
+import java.time.Instant;
 import java.util.*;
-import java.util.regex.Pattern;
-
 
 public final class DataAnalytics implements Serializable {
-    private static final Pattern SPACE = Pattern.compile(" ");
-
     private static final int minutes = 200;
-
+    private static final Duration hour = new Duration(60 * minutes);
+    private static final Duration day = hour.times(24);
+    private static final Duration week = day.times(7);
 
     public static void main(String[] args) throws Exception {
 
@@ -34,8 +35,6 @@ public final class DataAnalytics implements Serializable {
         String topic = "poi-data";
 
         Collection<String> topics = Arrays.asList(topic);
-
-        NoiseData noise = new NoiseData();
 
         Map<String, Object> kafkaParams = new HashMap<>();
         kafkaParams.put("bootstrap.servers", brokers);
@@ -49,93 +48,98 @@ public final class DataAnalytics implements Serializable {
         JavaStreamingContext streamingContext = new JavaStreamingContext(sparkConf, new Duration(2000));
         streamingContext.checkpoint("/data");
 
-        JavaInputDStream<ConsumerRecord<String, String>> streamJson =
-                KafkaUtils.createDirectStream(
-                        streamingContext,
-                        LocationStrategies.PreferConsistent(),
-                        ConsumerStrategies.<String, String>Subscribe(topics, kafkaParams)
-                );
+        JavaInputDStream<ConsumerRecord<String, String>> streamJson = KafkaUtils.createDirectStream(
+                streamingContext,
+                LocationStrategies.PreferConsistent(),
+                ConsumerStrategies.<String, String>Subscribe(topics, kafkaParams));
 
-        var streamNoiseData = streamJson.mapToPair(record -> {
+        var noiseData = streamJson.mapToPair(record -> {
             NoiseData data = new Gson().fromJson(record.value(), NoiseData.class);
             return new Tuple2<>(record.key(), data);
         });
 
-
-
-        // hourly,daily,and weekly moving average of noise level, for each point of interest;
+        // hourly,daily,and weekly moving average of noise level, for each point of
+        // interest;
         // tuples with id of the poi, an integer for the sum and the noise of the poi
-        var noises = streamNoiseData.mapValues((n) -> new Tuple2<>(1, n.getNoise()));
+        var noiseCount = noiseData.mapValues((n) -> new Tuple2<>(n.getNoise(), 1));
 
-        var hourly_sum = noises.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)),
-                // new Duration(60 * minutes));
-                new Duration(6000));
-        // var hourly_avg = hourly_sum.mapValues((a) -> a._2 / a._1);
-        var hourly_avg = hourly_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
+        var avgHour = noiseCount.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)), hour, hour)
+                .mapValues((a) -> a._1 / a._2);
 
-        var daily_sum = noises.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)),
-                new Duration(24 * 60 * minutes));
-        var daily_avg = daily_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
+        var avgDay = noiseCount.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)), day, day)
+                .mapValues((a) -> a._1 / a._2);
 
-        var weekly_sum = noises.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)),
-                new Duration(7 * 24 * 60 * minutes));
-        var weekly_avg = weekly_sum.map((a) -> new Tuple2<>(a._1, a._2._2 / a._2._1));
+        var avgWeek = noiseCount.reduceByKeyAndWindow(((a, b) -> new Tuple2<>(a._1 + b._1, a._2 + b._2)), week, week)
+                .mapValues((a) -> a._1 / a._2);
 
-        var jsonHourly = hourly_avg.map((h) -> new NoiseAverage(h._1, h._2).toJsonString());
-        // jsonHourly.print();
+        avgHour.foreachRDD((rdd) -> rdd.foreachPartition(p -> {
+            KafkaSink sink = new KafkaSink(brokers);
+            Long now = Instant.now().getEpochSecond();
+            p.forEachRemaining(t -> sink.publish("poi-avg-hour", t._1, new NoiseAverage(t._2, now).toJsonString()));
+        }));
 
-        var jsonDaily = daily_avg.map((h) -> new NoiseAverage(h._1, h._2).toJsonString());
-        // jsonDaily.print();
+        avgDay.foreachRDD((rdd) -> rdd.foreachPartition(p -> {
+            KafkaSink sink = new KafkaSink(brokers);
+            Long now = Instant.now().getEpochSecond();
+            p.forEachRemaining(t -> sink.publish("poi-avg-day", t._1, new NoiseAverage(t._2, now).toJsonString()));
+        }));
 
-        var jsonWeekly = weekly_avg.map((h) -> new NoiseAverage(h._1, h._2).toJsonString());
-        // weekly_avg.print();
+        avgWeek.foreachRDD((rdd) -> rdd.foreachPartition(p -> {
+            KafkaSink sink = new KafkaSink(brokers);
+            Long now = Instant.now().getEpochSecond();
+            p.forEachRemaining(t -> sink.publish("poi-avg-week", t._1, new NoiseAverage(t._2, now).toJsonString()));
+        }));
 
-
-
-        //  top 10 points of interest with the highest level of noise over the last hour;
-        var noiseStreamList = streamNoiseData.map(n -> {
+        // top 10 points of interest with the highest level of noise over the last hour;
+        var noiseDataList = noiseData.map(n -> {
             var t = new Tuple2<String, Float>(n._2.getId(), n._2.getNoise());
             var l = new ArrayList<Tuple2<String, Float>>();
             l.add(t);
             return l;
         });
 
-        var sortedNoiseStreamList = noiseStreamList
-                .reduceByWindow( DataAnalytics::mergeTop10,
-//                        new Duration(60 * minutes),
-//                        new Duration(60 * minutes));
-                        new Duration(6000),
-                        new Duration(6000));
+        var noiseTop10 = noiseDataList
+                .reduceByWindow((a, b) -> DataAnalytics.mergeTop(a, b, 10),
+                        new Duration(60 * minutes),
+                        new Duration(60 * minutes));
 
-        var top10 = sortedNoiseStreamList.map((n) -> new Top10NoiseData(n).toJsonString());
-        // top10.print();
-
+        noiseTop10.foreachRDD((rdd) -> rdd.foreachPartition(p -> {
+            KafkaSink sink = new KafkaSink(brokers);
+            long now = Instant.now().getEpochSecond();
+            p.forEachRemaining(t -> sink.publish("poi-top-10", Long.toString(now), new TopNoiseData(t).toJsonString()));
+        }));
 
         // point of interest with the longest streak of good noise level
-         var streakValues = streamNoiseData.mapWithState(StateSpec.function(new Function3<String, Optional<NoiseData>, State<StreakState>, Optional<Tuple2<String, Long>>>() {
-             @Override
-             public Optional<Tuple2<String,Long>> call(String s, Optional<NoiseData> noiseData, State<StreakState> state) throws Exception {
-                 int T = 69;
-                 if (!state.exists()) {
-                     state.update(new StreakState(T));
-                 }
+        var streaks = noiseData.mapWithState(StateSpec.function(
+                new Function3<String, Optional<NoiseData>, State<StreakState>, Optional<Tuple2<String, Long>>>() {
+                    @Override
+                    public Optional<Tuple2<String, Long>> call(String s, Optional<NoiseData> noiseData,
+                            State<StreakState> state) throws Exception {
+                        if (!noiseData.isPresent()) {
+                            return Optional.empty();
+                        }
 
-                 StreakState streakState = state.get();
-                 Optional<Long> result = streakState.updateState(noiseData.get());
-                 state.update(streakState);
+                        int T = 69;
+                        if (!state.exists()) {
+                            state.update(new StreakState(T));
+                        }
 
-                 if(result.isPresent())
-                     return Optional.of(new Tuple2<>(noiseData.get().getId(), result.get()));
-                 else
-                     return Optional.empty();
-         }}));
+                        StreakState streakState = state.get();
+                        Optional<Long> result = streakState.updateState(noiseData.get());
+                        state.update(streakState);
+                        if (result.isPresent())
+                            return Optional.of(new Tuple2<>(noiseData.get().getId(), result.get()));
+                        else
+                            return Optional.empty();
+                    }
+                }))
+                .filter(Optional::isPresent)
+                .mapToPair(Optional::get);
 
-         var v = streakValues.filter(Optional::isPresent)
-                 .map(Optional::get);
-
-         var jsonStreak = v.map((n) -> new StreakJson(n._1, n._2).toJsonString());
-         v.print();
-         jsonStreak.print();
+        streaks.foreachRDD((rdd) -> rdd.foreachPartition(p -> {
+            KafkaSink sink = new KafkaSink(brokers);
+            p.forEachRemaining(t -> sink.publish("poi-streak", t._1, Long.toString(t._2)));
+        }));
 
         streamingContext.start();
         try {
@@ -146,40 +150,42 @@ public final class DataAnalytics implements Serializable {
 
     }
 
-
-    private static ArrayList<Tuple2<String, Float>> mergeTop10(List<Tuple2<String, Float>> list1, List<Tuple2<String, Float>> list2) {
+    private static ArrayList<Tuple2<String, Float>> mergeTop(List<Tuple2<String, Float>> list1,
+            List<Tuple2<String, Float>> list2, int n) {
         int i1 = 0;
         int i2 = 0;
 
-        // merge
-        var mergedList = new ArrayList<Tuple2<String, Float>>();
+        var mergeList = new MergeList<String, Float>();
+
+        // Merge sort like strategy
+        // Append the highest noise between the heads of the two lists and shift
         while (i1 < list1.size() && i2 < list2.size()) {
-            if ( list1.get(i1)._2 > list2.get(i2)._2) {
-                mergedList.add(list1.get(i1++));
+            if (list1.get(i1)._2 > list2.get(i2)._2) {
+                mergeList.tryAdd(list1.get(i1++));
+            } else {
+                mergeList.tryAdd(list2.get(i2++));
             }
-            else {
-                mergedList.add(list2.get(i2++));
+            // Return if the list is at maximum capacity
+            if (mergeList.size() == n) {
+                return mergeList.toList();
             }
         }
-        while (i1 < list1.size()){
-            mergedList.add(list1.get(i1++));
+        // Append the remaining elements
+        while (i1 < list1.size()) {
+            mergeList.tryAdd(list1.get(i1++));
+            // Return if the list is at maximum capacity
+            if (mergeList.size() == n) {
+                return mergeList.toList();
+            }
         }
-        while (i2 < list2.size()){
-            mergedList.add(list2.get(i2++));
+        while (i2 < list2.size()) {
+            mergeList.tryAdd(list2.get(i2++));
+            // Return if the list is at maximum capacity
+            if (mergeList.size() == n) {
+                return mergeList.toList();
+            }
         }
 
-        // remove duplicates
-        var set = new HashSet<>();
-        var finalList = new ArrayList<Tuple2<String, Float>>();
-        for(var m : mergedList){
-            if(!set.contains(m._1)){
-                set.add(m._1);
-                finalList.add(m);
-            }
-            if(finalList.size() == 10)
-                break;
-        }
-
-        return finalList;
+        return mergeList.toList();
     }
 }

@@ -3,20 +3,20 @@ package it.polimi.noiseData;
 import java.io.Serializable;
 
 public class NoiseAverage implements Serializable {
-    private String id;
+    private Long time;
     private Float average;
 
-    public NoiseAverage(String id, Float average) {
-        this.id = id;
+    public NoiseAverage(Float average, Long unix_ts) {
+        this.time = unix_ts;
         this.average = average;
     }
 
-    public String getId() {
-        return id;
+    public Long getTime() {
+        return time;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public void setTime(Long time) {
+        this.time = time;
     }
 
     public Float getAverage() {
@@ -29,7 +29,7 @@ public class NoiseAverage implements Serializable {
 
     public String toJsonString() {
         return "{" +
-                "\"id\": \"" + id + "\"," +
+                "\"time\": \"" + time + "\"," +
                 "\"average\": " + average +
                 '}';
     }

@@ -4,13 +4,11 @@ import scala.Tuple2;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 
-public class Top10NoiseData implements Serializable {
+public class TopNoiseData implements Serializable {
     private  ArrayList<Tuple2<String, Float>> top10List;
 
-    public Top10NoiseData(ArrayList<Tuple2<String, Float>> top10List) {
+    public TopNoiseData(ArrayList<Tuple2<String, Float>> top10List) {
         this.top10List = top10List;
     }
 
@@ -32,5 +30,3 @@ public class Top10NoiseData implements Serializable {
     }
 
 }
-
-
