@@ -15,3 +15,8 @@ target/
 
 iot/contiki/rpl-border-router/obj_cooja/
 iot/contiki/mqtt-demo/obj_cooja/
+csv/poi-avg-day.csv
+csv/poi-avg-hour.csv
+csv/poi-avg-week.csv
+csv/poi-streak.csv
+csv/poi-top-10.csv
