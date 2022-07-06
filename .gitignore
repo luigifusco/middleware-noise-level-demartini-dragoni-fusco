@@ -9,8 +9,7 @@ zookeeper-data/
 mosquitto-data/
 .vscode/c_cpp_properties.json
 
-mpi/target/
-spark/driver/target
+target/
 
 iot/contiki/rpl-border-router/obj_cooja/
 iot/contiki/mqtt-demo/obj_cooja/

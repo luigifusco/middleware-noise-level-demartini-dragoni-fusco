@@ -63,4 +63,10 @@ public class StreakState implements Serializable {
     public void setBaseTimestamp(long baseTimestamp) {
         this.baseTimestamp = baseTimestamp;
     }
+
+    @Override
+    public String toString() {
+        return "StreakState [baseTimestamp=" + baseTimestamp + ", currentValue=" + currentValue + ", maxValue="
+                + maxValue + ", t=" + t + "]";
+    }
 }

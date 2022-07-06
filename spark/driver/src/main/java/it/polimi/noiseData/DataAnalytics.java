@@ -74,19 +74,19 @@ public final class DataAnalytics implements Serializable {
 
         avgHour.foreachRDD((rdd) -> rdd.foreachPartition(p -> {
             KafkaSink sink = new KafkaSink(brokers);
-            Long now = Instant.now().getEpochSecond();
+            Long now = Instant.now().toEpochMilli();
             p.forEachRemaining(t -> sink.publish("poi-avg-hour", t._1, new NoiseAverage(t._2, now).toJsonString()));
         }));
 
         avgDay.foreachRDD((rdd) -> rdd.foreachPartition(p -> {
             KafkaSink sink = new KafkaSink(brokers);
-            Long now = Instant.now().getEpochSecond();
+            Long now = Instant.now().toEpochMilli();
             p.forEachRemaining(t -> sink.publish("poi-avg-day", t._1, new NoiseAverage(t._2, now).toJsonString()));
         }));
 
         avgWeek.foreachRDD((rdd) -> rdd.foreachPartition(p -> {
             KafkaSink sink = new KafkaSink(brokers);
-            Long now = Instant.now().getEpochSecond();
+            Long now = Instant.now().toEpochMilli();
             p.forEachRemaining(t -> sink.publish("poi-avg-week", t._1, new NoiseAverage(t._2, now).toJsonString()));
         }));
 
@@ -105,7 +105,7 @@ public final class DataAnalytics implements Serializable {
 
         noiseTop10.foreachRDD((rdd) -> rdd.foreachPartition(p -> {
             KafkaSink sink = new KafkaSink(brokers);
-            long now = Instant.now().getEpochSecond();
+            long now = Instant.now().toEpochMilli();
             p.forEachRemaining(t -> sink.publish("poi-top-10", Long.toString(now), new TopNoiseData(t).toJsonString()));
         }));
 
@@ -126,6 +126,7 @@ public final class DataAnalytics implements Serializable {
 
                         StreakState streakState = state.get();
                         Optional<Long> result = streakState.updateState(noiseData.get());
+                        // System.err.println(noiseData.get().getId() + " " + streakState);
                         state.update(streakState);
                         if (result.isPresent())
                             return Optional.of(new Tuple2<>(noiseData.get().getId(), result.get()));
