@@ -73,6 +73,7 @@ services:
       - SPARK_MASTER=spark://spark-master:7077
       - SPARK_LOCAL_IP=spark-driver
       - SPARK_LOG_LEVEL=WARN
+      - KAFKA_BROKER=kafka:9092
     depends_on:
       - spark-master
       - kafka
@@ -127,6 +128,17 @@ services:
   #   networks:
   #     - backend
   #     - simulation
+
+  kafka-consumer:
+    build: ./kafka-consumer
+    volumes:
+      - ./csv:/data:rw
+    environment:
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - kafka
+    networks:
+      - backend
 
 networks:
   backend:

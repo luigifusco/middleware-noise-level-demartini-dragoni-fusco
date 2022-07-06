@@ -11,16 +11,17 @@ public class StreakState implements Serializable {
 
 
     public Optional<Long> updateState(NoiseData noise) {
+        long tsSecs = noise.getTs() / 1000; // We only need second precision for streaks
         // if the noise is higher than t, reset the current value
         if (baseTimestamp == 0){
-            baseTimestamp = noise.getTs();
+            baseTimestamp = tsSecs;
         }
 
         if (noise.getNoise() > t) {
-            baseTimestamp = noise.getTs();
+            baseTimestamp = tsSecs;
             // mi salvo il timestamp corrente, che sarebbe quando sono
         } else {
-            this.currentValue = noise.getTs() - baseTimestamp;
+            this.currentValue = tsSecs - baseTimestamp;
             if (this.currentValue > maxValue) {
                 this.maxValue = this.currentValue;
                 return Optional.of(this.maxValue);

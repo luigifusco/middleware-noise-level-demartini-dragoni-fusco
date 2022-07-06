@@ -30,9 +30,12 @@ public final class DataAnalytics implements Serializable {
     private static final Duration week = day.times(7);
 
     public static void main(String[] args) throws Exception {
-
-        String brokers = "kafka:9092";
+        String brokers = System.getenv("KAFKA_BROKER");
         String topic = "poi-data";
+
+        if (brokers == null) {
+            throw new Exception("Missing KAFKA_BROKER env variable");
+        }
 
         Collection<String> topics = Arrays.asList(topic);
 
