@@ -4,15 +4,16 @@
 
     <groupId>it.polimi.noiseData</groupId>
     <artifactId>kafka_dumper</artifactId>
-    <version>1</version>
 
     <name>Kafka consumer</name>
+    <packaging>jar</packaging>
+    <version>1</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <maven.compiler.source>16</maven.compiler.source>
-        <maven.compiler.target>16</maven.compiler.target>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
     </properties>
 
     <dependencies>

@@ -2,10 +2,10 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>spark_tutorial</groupId>
-    <artifactId>spark_tutorial</artifactId>
+    <groupId>it.polimi.noiseData</groupId>
+    <artifactId>spark_noise_analysis</artifactId>
 
-    <name>Spark Tutorial</name>
+    <name>Spark noise analysis</name>
     <packaging>jar</packaging>
     <version>1.0</version>
 

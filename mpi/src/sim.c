@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <time.h>
 #include <string.h>
 #include <mpi.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 #include "toml/toml.h"
 #include "sim.h"
@@ -101,10 +101,15 @@ void sensor_add_source(sensor_t *restrict s, const entity_t *restrict e) {
 }
 
 reading_msg_t sensor_get_reading(const sensor_t * s) {
+
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  long ts = (long)(tv.tv_sec) * 1000 + (long)(tv.tv_usec) / 1000;
+
   reading_msg_t r;
   r.id = strdup(s->id);
   r.noise = lin_to_dbm(s->noise_mw);
-  r.ts = time(NULL);
+  r.ts = ts;
   return r;
 }
 
