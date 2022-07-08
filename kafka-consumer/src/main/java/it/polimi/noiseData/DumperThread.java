@@ -35,12 +35,12 @@ public class DumperThread extends Thread {
 
     public void run() {
         try (FileWriter writer = new FileWriter(path)) {
-            writer.write("key, value\n");
+            writer.write("\"key\",\"value\"\n");
             writer.flush();
             while (!Thread.interrupted()) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(1000));
                 for (ConsumerRecord<String, String> record : records.records(topic)) {
-                    writer.write(record.key() + ", " + record.value() + '\n');
+                    writer.write(String.format("\"%s\",\"%s\"\n", record.key(), record.value()));
                 }
                 writer.flush();
             }
