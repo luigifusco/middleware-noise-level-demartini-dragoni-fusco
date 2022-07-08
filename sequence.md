@@ -5,15 +5,13 @@ participant nodered
 participant mosquitto
 participant spark
 participant kafka
-participant api
+participant consumer
 mobile -> gateway: RawSensorData
 gateway -> mosquitto: RawSensorData
 mosquitto -> nodered: RawSensorData
 nodered -> kafka: POINoiseData
-api -> kafka: Request
-kafka -> spark: Request
 kafka -> spark: POINoiseData
 spark -> kafka: ProcessedData
-kafka -> api: ProcessedData
+kafka -> consumer: ProcessedData
 ```
 
