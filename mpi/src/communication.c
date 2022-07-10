@@ -8,7 +8,8 @@
 #include "sim.h"
 #include "communication.h"
 
-char* format_msg(const reading_msg_t *msg) {
+
+char* format_msg_json(const reading_msg_t *msg) {
     const char* FMT = "{\"id\"=\"%s\",\"noise\"=%f,\"ts\"=%ld}";
     const size_t S = 64;
     char* buf = (char*)malloc(S);
@@ -73,15 +74,13 @@ rd_kafka_t* kafka_build_producer(char* broker) {
     return producer;
 }
 
-int kafka_send_reading(rd_kafka_t* producer, reading_msg_t* reading) {
+int kafka_send_reading(rd_kafka_t* producer, reading_msg_t* reading, char* topic) {
     rd_kafka_resp_err_t err;
-
-    const char* topic = "poi-data"; // TODO: read from config
 
     char* key = strdup(reading->id);
     const size_t key_len = strlen(key);
 
-    const char* value = format_msg(reading);
+    const char* value = format_msg_json(reading);
     const size_t value_len = strlen(value);
 
     err = rd_kafka_producev(producer,

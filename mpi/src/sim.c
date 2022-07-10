@@ -44,6 +44,7 @@ MPI_Datatype define_sensor_dt() {
     return dt;
 }
 
+// Init a sensor array of size `n` in random positions within `bounds`
 sensor_t* sensor_spawn_n(size_t n, bounds_t bounds) {
   sensor_t* sensors = (sensor_t*)calloc(n, sizeof(sensor_t));
 
@@ -57,6 +58,7 @@ sensor_t* sensor_spawn_n(size_t n, bounds_t bounds) {
   return sensors;
 }
 
+// Run a discrete simulation step for the entity
 void entity_step(entity_t* e, bounds_t bounds, float dt) {
   e->x += e->x_v * dt;
   e->y += e->y_v * dt;
@@ -85,6 +87,7 @@ void entity_step(entity_t* e, bounds_t bounds, float dt) {
   // );
 }
 
+// Get noise generated from the entity in Watts
 float entity_noise(const entity_t* e) {
   if (e->kind == PERSON) {
     return dbm_to_lin(NOISE_P);
@@ -93,6 +96,7 @@ float entity_noise(const entity_t* e) {
   }
 }
 
+// Add the contribution of a noise source to the sensor reading
 void sensor_add_source(sensor_t *restrict s, const entity_t *restrict e) {
   float d = distance_ang(s->x, s->y, e->x, e->y);
   double contribution = noise_decay(entity_noise(e), d);
@@ -113,10 +117,16 @@ reading_msg_t sensor_get_reading(const sensor_t * s) {
   return r;
 }
 
-// Process 0 selects a number num.
-// All other processes have an array that they filter to only keep the elements
-// that are multiples of num.
-// Process 0 collects the filtered arrays and print them.
+
+/// divide the entities counts between nodes
+/// each node spawns them at random positions
+
+/// update entities positions
+/// each node has the list of simulated sensors
+/// each node measures noise contribution for its entities on all sensors
+/// gather back the sum
+/// master publishes the result
+
 int main(int argc, char** argv) {
   /// DISTRIBUTE SENSORS
   // Init random number generator
@@ -137,6 +147,7 @@ int main(int argc, char** argv) {
   float t_step;
   sensor_t* sensors = NULL;
   rd_kafka_t* kafka_p = NULL;
+  char* kafka_topic = NULL;
 
   if (my_rank == 0) {
     if (argc != 2) {
@@ -158,14 +169,13 @@ int main(int argc, char** argv) {
     v_v = toml_double_get(conf_vechichles, "velocity");
 
     n_people = (n_p + world_size - 1) / world_size;
-    n_vehichles = (n_v + world_size - 1) / world_size; // TODO: exact division
+    n_vehichles = (n_v + world_size - 1) / world_size;
 
     bounds.x0 = (float)toml_double_get(conf_sim, "lat_0");
     bounds.x1 = (float)toml_double_get(conf_sim, "lat_1");
     bounds.y0 = (float)toml_double_get(conf_sim, "lon_0");
     bounds.y1 = (float)toml_double_get(conf_sim, "lon_1");
 
-    // TODO: configurable noise
     toml_array_t* conf_sensors = toml_array_get(conf_sim, "sensor");
     for (n_sensors = 0; toml_table_at(conf_sensors, n_sensors); n_sensors++);
 
@@ -181,6 +191,7 @@ int main(int argc, char** argv) {
 
     toml_table_t* conf_kafka = toml_table_get(conf, "kafka");
     kafka_p = kafka_build_producer(toml_string_get(conf_kafka, "broker"));
+    kafka_topic = toml_string_get(conf_kafka, "topic");
 
     toml_free(conf);
   }
@@ -255,7 +266,7 @@ int main(int argc, char** argv) {
     if (my_rank == 0) {
       for (int j = 0; j < n_sensors; j++) {
         reading_msg_t r = sensor_get_reading(&sensors[j]);
-        kafka_send_reading(kafka_p, &r);
+        kafka_send_reading(kafka_p, &r, kafka_topic);
         free(r.id);
       }
       printf("%04d\n", time(NULL));
@@ -266,20 +277,12 @@ int main(int argc, char** argv) {
 
   free(sensors);
   free(entities);
+  free(kafka_topic);
 
   if (my_rank == 0) {
     kafka_close(kafka_p);
   }
 
-  /// divide the entities counts between nodes
-  /// each node spawns them at random positions
-
-  /// update entities positions
-  /// each node has the list of simulated sensors
-  /// each node measures noise contribution for its entities on all sensors
-  /// gather back the sum
-  /// master sends back the result
-  
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Finalize();
 }

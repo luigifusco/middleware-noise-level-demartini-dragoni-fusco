@@ -8,6 +8,7 @@ float distance(float x0, float y0, float x1, float y1) {
     return sqrtf(dx * dx + dy * dy);
 }
 
+// Surface distance between two coordinates on earth
 float distance_ang(float lat0, float lon0, float lat1, float lon1) {
     const float l1 = lat0 * PI / 180; // phi, lambda in radians
     const float l2 = lat1 * PI / 180;
@@ -20,6 +21,7 @@ float distance_ang(float lat0, float lon0, float lat1, float lon1) {
     return EARTH_RADIUS * c; // in metres
 }
 
+// Compute noise perceived power at a distance according to the inverse quare law
 double noise_decay(double power, float distance) {
     if (distance < 1.0) {
         distance = 1.0;
@@ -27,10 +29,12 @@ double noise_decay(double power, float distance) {
     return power / (double)(distance * distance);
 }
 
+// Convert from dBm to Watts
 double dbm_to_lin(float dbm) {
     return 0.001 * pow(10.0, dbm / 10.0);
 }
 
+// Convert from Watts to dBm
 float lin_to_dbm(double lin) {
     return 10.0 * log10(lin / 0.001);
 }

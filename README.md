@@ -1,12 +1,13 @@
 # Middleware Projects - Polimi 2021/2022
 
-## Team members
+## Simulation and Analysis of Noise Level
+
+### Team members
  Name and Surname | Personal Code  | Email | Github Username 
 :---: | :---: | :---: | :---:
  Luca De Martini | 10565376 | luca.demartini@mail.polimi.it | @imDema 
  Arianna Dragoni | x |               x               |        x        
  Luigi Fusco | x |               x               |        x        
-
 
 
 ## How to run
@@ -53,10 +54,10 @@ TODO: setting up the gateway
 
 ### Endpoints
 
-(TODO)
+The communication microservices and the spark cluster have exposed endpoints that can be used to interact and extent the system
 
 Exposed endpoints:
-+ `9093`: Kafka server containing the processed data is exposed
++ `9093`: Kafka broker
 + `1883`: Mosquitto edge server
 + `1880`: NodeRED edge server
 + `8080, 7077`: Spark master
