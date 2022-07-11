@@ -34,18 +34,18 @@ The mosquitto server relays messages to the closest mosquitto server running on 
 
 The simulation is saved in the `middleware.csc` file, and is expected to be run in the virtual machine
 provided during the course after replacing the `mqtt-demo` and `rpl-border-router` demos with the ones in this repo.
-In our deployment the virtual machine acts as the edge, and should run a `mosquitto`
-instance acting as a bridge with the one deployed through Docker. This can be done by specifying a configuration file with
+In our deployment the virtual machine acts as the static gateway for the mobile devices, and should run a `mosquitto`
+instance acting as a bridge for the regional mosquitto server deployed on the edge through Docker.
+
+This can be done by running the mosquitto server with the config file provided in `iot/mosquitto.conf`. (Note: the address of the relay server must edited to the correct one)
 ```sh
 mosquitto -c mosquitto.conf
 ```
-editing the address to connect to.
-A tunnel conencting the cooja border router
-to the network inside the virtual machine can be set with the command
+A tunnel connecting the cooja border router
+to the network inside the virtual machine can be set by running the following command from the `rpl-border-router` directory.
 ```sh
 make TARGET=cooja connect-router-cooja
 ```
-run inside the `rpl-border-router` folder.
 
 ### Micoservices
 
