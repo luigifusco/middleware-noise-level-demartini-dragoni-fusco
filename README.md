@@ -3,11 +3,11 @@
 ## Simulation and Analysis of Noise Level
 
 ### Team members
- Name and Surname | Personal Code  | Email | Github Username 
-:---: | :---: | :---: | :---:
- Luca De Martini | 10565376 | luca.demartini@mail.polimi.it | @imDema 
- Arianna Dragoni | x |               x               |        x        
- Luigi Fusco | x |               x               |        x        
+ Name and Surname | Personal Code |             Email             | Github Username 
+:---: |:-------------:|:-----------------------------:| :---:
+ Luca De Martini |   10565376    | luca.demartini@mail.polimi.it | @imDema 
+ Arianna Dragoni |       x       |               x               |        x        
+ Luigi Fusco |   10601210    |  luigi1.fusco@mail.polimi.it  |        @luigifusco        
 
 
 ## How to run
@@ -32,7 +32,20 @@ The IoT tier can use real devices or run as a Cooja simulation.
 The mobile sensors connect to a gateway that acts as an IPv6 border router and hosts a mosquitto server relay.
 The mosquitto server relays messages to the closest mosquitto server running on the edge.
 
-TODO: setting up the gateway
+The simulation is saved in the `middleware.csc` file, and is expected to be run in the virtual machine
+provided during the course after replacing the `mqtt-demo` and `rpl-border-router` demos with the ones in this repo.
+In our deployment the virtual machine acts as the edge, and should run a `mosquitto`
+instance acting as a bridge with the one deployed through Docker. This can be done by specifying a configuration file with
+```sh
+mosquitto -c mosquitto.conf
+```
+editing the address to connect to.
+A tunnel conencting the cooja border router
+to the network inside the virtual machine can be set with the command
+```sh
+make TARGET=cooja connect-router-cooja
+```
+run inside the `rpl-border-router` folder.
 
 ### Micoservices
 
