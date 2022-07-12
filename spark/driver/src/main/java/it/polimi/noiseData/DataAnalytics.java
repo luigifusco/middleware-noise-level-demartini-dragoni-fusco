@@ -30,6 +30,7 @@ public final class DataAnalytics implements Serializable {
     private static final Duration week = day.times(7);
 
     public static void main(String[] args) throws Exception {
+        String master = System.getenv("SPARK_MASTER");
         String brokers = System.getenv("KAFKA_BROKER");
         String topic = "poi-data";
 
@@ -47,7 +48,10 @@ public final class DataAnalytics implements Serializable {
         kafkaParams.put("auto.offset.reset", "latest");
         kafkaParams.put("enable.auto.commit", false);
 
-        SparkConf sparkConf = new SparkConf().setAppName("JavaKafkaIntegration");
+        SparkConf sparkConf = new SparkConf()
+            .setAppName("NoiseDataAnalytics")
+            .setMaster(master);
+
         JavaStreamingContext streamingContext = new JavaStreamingContext(sparkConf, new Duration(2000));
         streamingContext.checkpoint("/data");
 
