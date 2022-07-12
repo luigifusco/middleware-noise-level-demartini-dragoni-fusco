@@ -54,6 +54,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <locale.h>
 /*---------------------------------------------------------------------------*/
 /*
  * Publish to a local MQTT broker (e.g. mosquitto) running on
@@ -353,12 +354,11 @@ init_config()
 //45.473280, 9.234783
   lat = get_rand_between(45.473280, 45.480905);
   lon = get_rand_between(9.223571, 9.234783);
+
+  setlocale(LC_NUMERIC, "C");
 }
-/*---------------------------------------------------------------------------*/
 
-/*---------------------------------------------------------------------------*/
-
-#include "noise.c"
+#include "noise.c" // Application code
 
 /*---------------------------------------------------------------------------*/
 static void

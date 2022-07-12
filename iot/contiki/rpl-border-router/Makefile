@@ -1,4 +1,5 @@
 CONTIKI_PROJECT = border-router
+CONTIKI = ../..
 all: $(CONTIKI_PROJECT)
 
 # The BR is either native or embedded, and in the latter case must support SLIP

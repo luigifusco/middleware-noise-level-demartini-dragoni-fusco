@@ -25,7 +25,7 @@
       <identifier>mtype79</identifier>
       <description>border</description>
       <source>[CONTIKI_DIR]/examples/rpl-border-router/border-router.c</source>
-      <commands>make border-router.cooja TARGET=cooja</commands>
+      <commands>make -j6 border-router.cooja TARGET=cooja</commands>
       <moteinterface>org.contikios.cooja.interfaces.Position</moteinterface>
       <moteinterface>org.contikios.cooja.interfaces.Battery</moteinterface>
       <moteinterface>org.contikios.cooja.contikimote.interfaces.ContikiVib</moteinterface>
@@ -50,7 +50,7 @@
       <identifier>mtype209</identifier>
       <description>mqtt</description>
       <source>[CONTIKI_DIR]/examples/mqtt-demo/mqtt-demo.c</source>
-      <commands>make mqtt-demo.cooja TARGET=cooja</commands>
+      <commands>make -j6 mqtt-demo.cooja TARGET=cooja</commands>
       <moteinterface>org.contikios.cooja.interfaces.Position</moteinterface>
       <moteinterface>org.contikios.cooja.interfaces.Battery</moteinterface>
       <moteinterface>org.contikios.cooja.contikimote.interfaces.ContikiVib</moteinterface>

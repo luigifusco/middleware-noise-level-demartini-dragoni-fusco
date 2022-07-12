@@ -1,18 +1,33 @@
+#define K 80.0
+#define WINDOW 6
+
 float readings_window[6] = {0};
 int cur_reading = 0;
 float cur_reading_sum = 0;
+
+// Simulated reading. A real world application would process a sensor reading here
+static float
+get_noise_reading(void)
+{
+  float reading = (float)rand() / (float)RAND_MAX;
+  reading *= 70.f;
+  reading += 30.f;
+
+  return reading;
+}
+
 static float
 get_noise_average(void)
 {
-  float reading = (float)rand() / (float) RAND_MAX;
-  reading *= 70.f;
-  reading += 30.f;
+  float reading = get_noise_reading();
   cur_reading_sum -= readings_window[cur_reading];
   readings_window[cur_reading] = reading;
   cur_reading_sum += reading;
-  cur_reading = (cur_reading+1)%6;
+  cur_reading = (cur_reading + 1) % WINDOW;
 
-  return cur_reading_sum/6.f;
+  float average = cur_reading_sum / (float)WINDOW;
+
+  return average > K ? reading : average;
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -28,14 +43,15 @@ publish(void)
 
   len = snprintf(buf_ptr, remaining,
                  "{"
-		 "\"lat\":%f,"
-		 "\"lon\":%f,"
+                 "\"lat\":%f,"
+                 "\"lon\":%f,"
                  "\"noise\":%f,"
                  "\"reliability\":%f"
                  "}",
-                 lat, lon, get_noise_average(), (float)rand()/(float)RAND_MAX);
+                 lat, lon, get_noise_average(), (float)rand() / (float)RAND_MAX);
 
-  if(len < 0 || len >= remaining) {
+  if (len < 0 || len >= remaining)
+  {
     LOG_ERR("Buffer too short. Have %d, need %d + \\0\n", remaining, len);
     return;
   }
