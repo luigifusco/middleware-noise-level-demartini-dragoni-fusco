@@ -105,6 +105,10 @@ services:
       - backend
       - edge
 
+  ### Deployment with multiple nodes:
+  ## Set `mpi` to use `/app/deploy.sh` as entrypoint
+  ## Pass the nodes hostname as arguments to the entrypoint
+  ## (The nodes must allow ssh login from `mpi`)
   mpi:
     build: ./mpi
     # entrypoint: /app/deploy.sh mpi-node-1 mpi-node-2
