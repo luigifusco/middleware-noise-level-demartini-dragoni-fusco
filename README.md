@@ -6,7 +6,7 @@
  Name and Surname | Personal Code |             Email             | Github Username 
 :---: |:-------------:|:-----------------------------:| :---:
  Luca De Martini |   10565376    | luca.demartini@mail.polimi.it | @imDema 
- Arianna Dragoni |       x       |               x               |        x        
+ Arianna Dragoni |   10611044   |   arianna.dragoni@mail.polimi.it  |        @ariannadragonii       
  Luigi Fusco |   10601210    |  luigi1.fusco@mail.polimi.it  |        @luigifusco        
 
 
