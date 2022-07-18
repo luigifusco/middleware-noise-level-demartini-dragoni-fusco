@@ -52,9 +52,7 @@ services:
     volumes:
       - spark-data:/data
     deploy:
-      replicas: 1
-    ports:
-      - '8081:8081'
+      replicas: 2
     depends_on:
       - spark-master
     environment:
@@ -111,27 +109,28 @@ services:
   ## (The nodes must allow ssh login from `mpi`)
   mpi:
     build: ./mpi
-    # entrypoint: /app/deploy.sh mpi-node-1 mpi-node-2
+    entrypoint: /app/deploy.sh mpi-node-1 mpi-node-2
     volumes:
       - ./mpi/simulation.toml:/app/simulation.toml:ro
     depends_on:
       - kafka
-    #  - mpi-node
+      - mpi-node-1
+      - mpi-node-2
     networks:
       - backend
       - simulation
 
-  # mpi-node-1:
-  #   build: ./mpi/node
-  #   networks:
-  #     - backend
-  #     - simulation
+  mpi-node-1:
+    build: ./mpi/node
+    networks:
+      - backend
+      - simulation
 
-  # mpi-node-2:
-  #   build: ./mpi/node
-  #   networks:
-  #     - backend
-  #     - simulation
+  mpi-node-2:
+    build: ./mpi/node
+    networks:
+      - backend
+      - simulation
 
   kafka-consumer:
     build: ./kafka-consumer

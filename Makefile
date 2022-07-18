@@ -11,7 +11,7 @@ attach:
 clear:
 	docker compose rm -v -s -f
 
-prune:
+prune: down
 	docker volume prune
 
 reset:
